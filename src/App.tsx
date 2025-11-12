@@ -11,6 +11,11 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import PaymentPolicy from "./pages/PaymentPolicy";
+import ReturnPolicy from "./pages/ReturnPolicy";
+import About from "./pages/About";
+import TrackOrder from "./pages/TrackOrder";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -32,6 +37,11 @@ const App = () => (
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/payment-policy" element={<PaymentPolicy />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/track-order" element={<TrackOrder />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
               </Route>

@@ -1,4 +1,4 @@
-import { ShoppingCart, User, Menu, LogOut } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
@@ -10,66 +10,123 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
   const { itemCount } = useCart();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold text-gradient">7Kicks</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-foreground/60 hover:text-foreground transition-colors">
-            Home
+    <header className="sticky top-0 z-50 w-full bg-white border-b">
+      <div className="container mx-auto px-4">
+        {/* Logo Section */}
+        <div className="flex h-20 items-center justify-between">
+          <div className="flex-1" />
+          
+          <Link to="/" className="flex items-center justify-center">
+            <span className="text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+              7<span className="block text-center -mt-2">KICKS.</span>
+            </span>
           </Link>
-          <Link to="/products" className="text-foreground/60 hover:text-foreground transition-colors">
-            Products
-          </Link>
-          {isAdmin && (
-            <Link to="/admin" className="text-foreground/60 hover:text-foreground transition-colors">
-              Admin
-            </Link>
-          )}
-        </nav>
 
-        <div className="flex items-center space-x-4">
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          <div className="flex-1 flex items-center justify-end space-x-4">
+            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(!searchOpen)}>
+              <Search className="h-6 w-6" />
+            </Button>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-6 w-6" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/track-order">Track Order</Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">Admin Dashboard</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={signOut}>Sign Out</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
                 <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+                  <User className="h-6 w-6" />
                 </Button>
+              </Link>
+            )}
+            
+            <Link to="/cart">
+              <Button variant="ghost" size="icon" className="relative">
+                <ShoppingCart className="h-6 w-6" />
+                {itemCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {itemCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="border-t py-3">
+          <div className="flex items-center justify-center space-x-8 text-sm">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center space-x-1 hover:text-primary transition-colors">
+                <span>Category</span>
+                <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={signOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+              <DropdownMenuContent>
+                <DropdownMenuItem asChild>
+                  <Link to="/products">All Products</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products?category=travis-scott">Travis Scott</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products?category=low-dunks">Low Dunks</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products?category=retro-4">Retro 4</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products?category=air-jordans">Air Jordan's</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/products?category=air-forces">Air Force's</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Link to="/auth">
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-              </Button>
+            
+            <Link to="/shipping-policy" className="hover:text-primary transition-colors">
+              Shipping Policy
             </Link>
-          )}
-          
-          <Link to="/cart">
-            <Button variant="ghost" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              {itemCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                  {itemCount}
-                </Badge>
-              )}
-            </Button>
-          </Link>
-        </div>
+            <Link to="/payment-policy" className="hover:text-primary transition-colors">
+              Payment Policy
+            </Link>
+            <Link to="/return-policy" className="hover:text-primary transition-colors">
+              Return and Refund Policy
+            </Link>
+            <Link to="/about" className="hover:text-primary transition-colors">
+              About Us
+            </Link>
+            <a 
+              href="https://instagram.com/7kicks" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Follow 7Kicks on Instagram !!
+            </a>
+          </div>
+        </nav>
       </div>
     </header>
   );
