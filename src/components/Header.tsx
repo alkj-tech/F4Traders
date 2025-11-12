@@ -26,7 +26,7 @@ export function Header() {
           
           <Link to="/" className="flex items-center justify-center">
             <span className="text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-              7<span className="block text-center -mt-2">KICKS.</span>
+              F4<span className="block text-center -mt-2">TRADERS.</span>
             </span>
           </Link>
 
