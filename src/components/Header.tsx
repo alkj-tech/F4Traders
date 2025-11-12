@@ -118,12 +118,12 @@ export function Header() {
               About Us
             </Link>
             <a 
-              href="https://instagram.com/7kicks" 
+              href="https://instagram.com/F4traders" 
               target="_blank" 
               rel="noopener noreferrer"
               className="hover:text-primary transition-colors"
             >
-              Follow 7Kicks on Instagram !!
+              Follow F4traders on Instagram !!
             </a>
           </div>
         </nav>

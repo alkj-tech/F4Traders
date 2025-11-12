@@ -8,7 +8,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-bold">7Kicks</h3>
+            <h3 className="text-2xl font-bold">F4traders</h3>
             <p className="text-sm text-muted-foreground">
               Your destination for premium footwear. Step into style with our curated collection.
             </p>
@@ -85,7 +85,7 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center space-x-2 text-muted-foreground">
                 <Mail className="h-4 w-4" />
-                <span>contact@7kicks.com</span>
+                <span>contact@F4traders.com</span>
               </li>
               <li className="flex items-center space-x-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
@@ -101,7 +101,7 @@ export function Footer() {
 
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} 7Kicks. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} F4traders. All rights reserved.</p>
         </div>
       </div>
     </footer>

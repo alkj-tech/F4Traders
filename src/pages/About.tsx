@@ -8,17 +8,17 @@ export default function About() {
       <AnnouncementBar />
       <Header />
       <main className="flex-1 container mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold mb-8">About 7Kicks</h1>
+        <h1 className="text-4xl font-bold mb-8">About F4traders</h1>
         
         <div className="prose max-w-none space-y-6">
           <section>
             <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
-            <p>Welcome to 7Kicks - your ultimate destination for premium branded sneakers in India. We started with a simple mission: to bring authentic, high-quality footwear to sneaker enthusiasts across the country.</p>
+            <p>Welcome to F4traders - your ultimate destination for premium branded sneakers in India. We started with a simple mission: to bring authentic, high-quality footwear to sneaker enthusiasts across the country.</p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">What We Offer</h2>
-            <p>At 7Kicks, we specialize in:</p>
+            <p>At F4traders, we specialize in:</p>
             <ul className="list-disc pl-6 mt-2">
               <li>100% Authentic branded sneakers</li>
               <li>Latest releases from top brands</li>
@@ -53,8 +53,8 @@ export default function About() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">Connect With Us</h2>
-            <p>Follow us on Instagram @7kicks for the latest updates, exclusive releases, and sneaker content. Join our community of sneaker enthusiasts!</p>
-            <p className="mt-4">For any questions, reach us at support@7kicks.in or call +91-XXXXXXXXXX</p>
+            <p>Follow us on Instagram @F4traders for the latest updates, exclusive releases, and sneaker content. Join our community of sneaker enthusiasts!</p>
+            <p className="mt-4">For any questions, reach us at support@F4traders.in or call +91-XXXXXXXXXX</p>
           </section>
         </div>
       </main>

@@ -40,7 +40,7 @@ export default function ReturnPolicy() {
           <section>
             <h2 className="text-2xl font-semibold mb-4">Return Process</h2>
             <ol className="list-decimal pl-6 mt-2">
-              <li>Contact us at support@7kicks.in within 3 days of delivery</li>
+              <li>Contact us at support@F4traders.in within 3 days of delivery</li>
               <li>Provide your order number and reason for return</li>
               <li>Our team will arrange a pickup from your location</li>
               <li>Once received and inspected, we'll process your replacement</li>
@@ -59,7 +59,7 @@ export default function ReturnPolicy() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
-            <p>For any return or refund queries, please contact us at support@7kicks.in or call +91-XXXXXXXXXX</p>
+            <p>For any return or refund queries, please contact us at support@F4traders.in or call +91-XXXXXXXXXX</p>
           </section>
         </div>
       </main>

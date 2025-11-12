@@ -43,7 +43,7 @@ export default function ShippingPolicy() {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
-            <p>For any shipping-related queries, please contact us at support@7kicks.in or call +91-XXXXXXXXXX</p>
+            <p>For any shipping-related queries, please contact us at support@F4traders.in or call +91-XXXXXXXXXX</p>
           </section>
         </div>
       </main>
