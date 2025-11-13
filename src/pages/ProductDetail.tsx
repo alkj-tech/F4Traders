@@ -194,6 +194,10 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        <div className="container mx-auto px-4 mt-12">
+          <ProductReviews productId={product.id} />
+        </div>
       </main>
       <Footer />
     </div>

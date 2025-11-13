@@ -7,14 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export default function Checkout() {
-  const { items } = useCart();
+  const { items, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('cod');
   const [address, setAddress] = useState({
     fullName: '',
     phone: '',
@@ -59,18 +68,126 @@ export default function Checkout() {
 
   const totals = calculateTotals();
 
+  const createOrder = async () => {
+    const orderItems = items.map(item => ({
+      product_id: item.product.id,
+      product_name: item.product.title,
+      quantity: item.quantity,
+      price: item.product.price_inr,
+      discount_percent: item.product.discount_percent,
+      gst_percent: item.product.gst_percent,
+      cgst_percent: item.product.cgst_percent,
+      size: item.size,
+      color: item.color,
+      total_price: item.product.price_inr * item.quantity * (1 - item.product.discount_percent / 100),
+    }));
+
+    const orderNo = `ORD-${Date.now()}`;
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .insert([{
+        order_no: orderNo,
+        user_id: user!.id,
+        items: orderItems as any,
+        subtotal: totals.subtotal,
+        discount_total: totals.discountTotal,
+        gst_total: totals.gstTotal,
+        cgst_total: totals.cgstTotal,
+        total_amount: totals.total,
+        shipping_address: address as any,
+        payment_status: paymentMethod === 'cod' ? 'pending' : 'pending',
+        order_status: 'pending',
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return order;
+  };
+
+  const handleRazorpayPayment = async (order: any) => {
+    try {
+      const { data: razorpayOrder } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          amount: totals.total,
+          currency: 'INR',
+          receipt: order.order_no,
+        },
+      });
+
+      if (!razorpayOrder) throw new Error('Failed to create Razorpay order');
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'F4TRADERS',
+        description: `Order ${order.order_no}`,
+        order_id: razorpayOrder.id,
+        handler: async function (response: any) {
+          try {
+            await supabase.functions.invoke('verify-razorpay-payment', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderId: order.id,
+              },
+            });
+
+            await clearCart();
+            toast.success('Payment successful! Order placed.');
+            navigate('/track-order');
+          } catch (error) {
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: address.fullName,
+          contact: address.phone,
+        },
+        theme: {
+          color: '#000000',
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleCODPayment = async (order: any) => {
+    try {
+      await supabase.functions.invoke('generate-invoice', {
+        body: { orderId: order.id },
+      });
+
+      await clearCart();
+      toast.success('Order placed successfully! You will receive confirmation email shortly.');
+      navigate('/track-order');
+    } catch (error) {
+      toast.error('Failed to process order');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // TODO: Integrate with Razorpay payment gateway
-      // For now, just show message that payment integration is pending
-      toast.info('Payment integration will be connected with Razorpay API keys');
-      
-      // After payment success, order will be created and invoice generated
+      const order = await createOrder();
+
+      if (paymentMethod === 'razorpay') {
+        await handleRazorpayPayment(order);
+      } else {
+        await handleCODPayment(order);
+      }
     } catch (error) {
-      toast.error('Checkout failed');
+      console.error('Checkout error:', error);
+      toast.error('Checkout failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -148,16 +265,27 @@ export default function Checkout() {
                     />
                   </div>
                 </div>
-
-                <div className="pt-4">
-                  <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                    {loading ? 'Processing...' : 'Proceed to Payment'}
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-2 text-center">
-                    Secure payment via Razorpay • No COD available
-                  </p>
-                </div>
               </form>
+            </Card>
+
+            <Card className="p-6 mt-6">
+              <h2 className="text-xl font-bold mb-4">Payment Method</h2>
+              <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                <div className="flex items-center space-x-2 p-4 border rounded-lg mb-3 hover:border-primary transition-colors cursor-pointer">
+                  <RadioGroupItem value="cod" id="cod" />
+                  <Label htmlFor="cod" className="flex-1 cursor-pointer">
+                    <div className="font-semibold">Cash on Delivery</div>
+                    <div className="text-sm text-muted-foreground">Pay when you receive the order</div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
+                  <RadioGroupItem value="razorpay" id="razorpay" />
+                  <Label htmlFor="razorpay" className="flex-1 cursor-pointer">
+                    <div className="font-semibold">Razorpay (Online Payment)</div>
+                    <div className="text-sm text-muted-foreground">Pay securely with card, UPI, net banking</div>
+                  </Label>
+                </div>
+              </RadioGroup>
             </Card>
           </div>
 
@@ -207,6 +335,15 @@ export default function Checkout() {
                   </div>
                 </div>
               </div>
+
+              <Button 
+                onClick={handleSubmit} 
+                disabled={loading} 
+                className="w-full mt-6"
+                size="lg"
+              >
+                {loading ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order (COD)' : 'Pay with Razorpay'}
+              </Button>
             </Card>
           </div>
         </div>
