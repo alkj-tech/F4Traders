@@ -43,8 +43,20 @@ export default function TrackOrder() {
       if (data) {
         setOrderData(data);
         
-        // TODO: When Professional Courier API key is added, fetch real-time tracking data
-        // For now, showing order status from database
+        // Fetch real-time tracking data if tracking number exists
+        if (data.tracking_no) {
+          try {
+            const { data: trackingData } = await supabase.functions.invoke('track-delivery', {
+              body: { trackingNo: data.tracking_no },
+            });
+
+            if (trackingData?.success && trackingData?.data) {
+              setOrderData({ ...data, liveTracking: trackingData.data });
+            }
+          } catch (trackingError) {
+            console.log('Live tracking not available:', trackingError);
+          }
+        }
       } else {
         toast({
           title: "Order Not Found",
