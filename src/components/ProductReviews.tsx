@@ -114,7 +114,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
                 <label className="block text-sm font-medium mb-2">Your Rating</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button
+                    <Button
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
@@ -127,7 +127,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
                             : "text-muted-foreground"
                         }`}
                       />
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
