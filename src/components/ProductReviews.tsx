@@ -34,13 +34,31 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
   }, [productId]);
 
   const fetchReviews = async () => {
-    const { data } = await supabase
-      .from("reviews")
-      .select("*, profiles(full_name)")
-      .eq("product_id", productId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select(`
+          id,
+          user_id,
+          rating,
+          comment,
+          created_at,
+          profiles:user_id (
+            full_name
+          )
+        `)
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false });
 
-    if (data) setReviews(data as any);
+      if (error) {
+        console.error('Error fetching reviews:', error);
+        return;
+      }
+
+      setReviews((data || []) as any);
+    } catch (err) {
+      console.error('Error:', err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,12 +70,12 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("reviews").insert({
+      const { error } = await supabase.from("reviews").insert([{
         product_id: productId,
         user_id: user.id,
         rating,
         comment,
-      });
+      }] as any);
 
       if (error) throw error;
 
