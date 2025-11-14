@@ -16,12 +16,15 @@ import PaymentPolicy from "./pages/PaymentPolicy";
 import ReturnPolicy from "./pages/ReturnPolicy";
 import About from "./pages/About";
 import TrackOrder from "./pages/TrackOrder";
+import MyOrders from "./pages/MyOrders";
+import MyAddresses from "./pages/MyAddresses";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
 import AdminCategories from "./pages/admin/Categories";
 import AdminSettings from "./pages/admin/Settings";
+import AdminReviews from "./pages/admin/Reviews";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,11 +49,14 @@ const App = () => (
               <Route path="/return-policy" element={<ReturnPolicy />} />
               <Route path="/about" element={<About />} />
               <Route path="/track-order" element={<TrackOrder />} />
+              <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/my-addresses" element={<MyAddresses />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="categories" element={<AdminCategories />} />
+                <Route path="reviews" element={<AdminReviews />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
               <Route path="*" element={<NotFound />} />

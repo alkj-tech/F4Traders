@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { SearchDialog } from "./SearchDialog";
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
@@ -43,6 +44,12 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-orders">My Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/my-addresses">My Addresses</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/track-order">Track Order</Link>
                   </DropdownMenuItem>
@@ -128,6 +135,7 @@ export function Header() {
           </div>
         </nav>
       </div>
+      <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 }
