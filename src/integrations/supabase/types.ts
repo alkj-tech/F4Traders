@@ -298,8 +298,11 @@ export type Database = {
           comment: string
           created_at: string
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
           product_id: string
           rating: number
+          status: string | null
           updated_at: string
           user_id: string
         }
@@ -307,8 +310,11 @@ export type Database = {
           comment: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           product_id: string
           rating: number
+          status?: string | null
           updated_at?: string
           user_id: string
         }
@@ -316,8 +322,11 @@ export type Database = {
           comment?: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           product_id?: string
           rating?: number
+          status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -351,6 +360,56 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      user_addresses: {
+        Row: {
+          city: string
+          created_at: string | null
+          full_name: string
+          id: string
+          is_default: boolean | null
+          phone: string
+          pincode: string
+          state: string
+          street: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          full_name: string
+          id?: string
+          is_default?: boolean | null
+          phone: string
+          pincode: string
+          state: string
+          street: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          is_default?: boolean | null
+          phone?: string
+          pincode?: string
+          state?: string
+          street?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
