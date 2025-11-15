@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -267,8 +267,79 @@ export default function ProductDetail() {
         <div className="mt-12">
           <ProductReviews productId={id!} />
         </div>
+
+        {/* Related Products */}
+        <RelatedProducts 
+          categoryId={product.category_id} 
+          currentProductId={product.id} 
+        />
       </main>
       <Footer />
     </div>
+  );
+}
+
+// Related Products Component
+function RelatedProducts({ categoryId, currentProductId }: { categoryId: string | null, currentProductId: string }) {
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (categoryId) {
+      fetchRelatedProducts();
+    }
+  }, [categoryId]);
+
+  const fetchRelatedProducts = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('category_id', categoryId)
+      .eq('is_active', true)
+      .neq('id', currentProductId)
+      .limit(4);
+    
+    setRelatedProducts(data || []);
+  };
+
+  if (relatedProducts.length === 0) return null;
+
+  return (
+    <section className="container py-16">
+      <h2 className="text-2xl font-bold mb-8">Related Products</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {relatedProducts.map((product) => {
+          const images = Array.isArray(product.images) ? product.images : [];
+          const finalPrice = product.price_inr * (1 - (product.discount_percent || 0) / 100);
+          
+          return (
+            <Link key={product.id} to={`/products/${product.id}`} className="group">
+              <div className="bg-card rounded-lg overflow-hidden border hover:shadow-lg transition-shadow">
+                <div className="aspect-square overflow-hidden bg-muted">
+                  <img
+                    src={images[0] || '/placeholder.svg'}
+                    alt={product.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="font-semibold line-clamp-1">{product.title}</h3>
+                  {product.brand && (
+                    <p className="text-sm text-muted-foreground">{product.brand}</p>
+                  )}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold">₹{finalPrice.toFixed(0)}</span>
+                    {product.discount_percent > 0 && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        ₹{product.price_inr}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }

@@ -38,12 +38,8 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
       const { data, error } = await supabase
         .from("reviews")
         .select(`
-          id,
-          user_id,
-          rating,
-          comment,
-          created_at,
-          profiles:user_id (
+          *,
+          profiles!inner (
             full_name
           )
         `)

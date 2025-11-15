@@ -127,6 +127,22 @@ export default function Checkout() {
         order_id: razorpayOrder.id,
         handler: async function (response: any) {
           try {
+            // Reduce stock for each item
+            for (const item of items) {
+              const { data: product } = await supabase
+                .from('products')
+                .select('stock')
+                .eq('id', item.product.id)
+                .single();
+
+              if (product) {
+                await supabase
+                  .from('products')
+                  .update({ stock: product.stock - item.quantity })
+                  .eq('id', item.product.id);
+              }
+            }
+
             await supabase.functions.invoke('verify-razorpay-payment', {
               body: {
                 razorpay_order_id: response.razorpay_order_id,
@@ -161,6 +177,22 @@ export default function Checkout() {
 
   const handleCODPayment = async (order: any) => {
     try {
+      // Reduce stock for each item
+      for (const item of items) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.product.id)
+          .single();
+
+        if (product) {
+          await supabase
+            .from('products')
+            .update({ stock: product.stock - item.quantity })
+            .eq('id', item.product.id);
+        }
+      }
+
       await supabase.functions.invoke('generate-invoice', {
         body: { orderId: order.id },
       });

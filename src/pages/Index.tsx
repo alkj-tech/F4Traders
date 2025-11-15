@@ -4,8 +4,7 @@ import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { FeaturedCategories } from "@/components/FeaturedCategories";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { WhyChooseUs } from "@/components/WhyChooseUs";
-import { HeroSection } from "@/components/HeroSection";
-import { RecommendedProducts } from "@/components/RecommendedProducts";
+import { ProductCarousel } from "@/components/ProductCarousel";
 
 const Index = () => {
   return (
@@ -13,8 +12,7 @@ const Index = () => {
       <AnnouncementBar />
       <Header />
       <main className="flex-1">
-        <HeroSection />
-        <RecommendedProducts />
+        <ProductCarousel />
         <FeaturedCategories />
         <FeaturedProducts />
         <WhyChooseUs />
