@@ -48,6 +48,7 @@ export const ProductReviews = ({ productId }: ProductReviewsProps) => {
           )
         `)
         .eq("product_id", productId)
+        .eq("status", "approved")
         .order("created_at", { ascending: false });
 
       if (error) {
