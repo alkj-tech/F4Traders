@@ -91,113 +91,109 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <main className="flex-1 container mx-auto px-4 py-6 lg:py-8 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-[500px_1fr] gap-6 lg:gap-12">
           {/* Left: Image Gallery */}
-          <div className="space-y-4">
-            {/* Thumbnail sidebar + Main image */}
-            <div className="flex gap-4">
-              {/* Thumbnails */}
-              {images.length > 1 && (
-                <div className="flex flex-col gap-3 w-20">
-                  {images.slice(0, 4).map((img: string, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        selectedImage === idx
-                          ? 'border-primary ring-2 ring-primary ring-offset-2'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`${product.title} ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Main image */}
-              <div className="flex-1 aspect-square rounded-lg overflow-hidden bg-muted">
-                <img
-                  src={images[selectedImage] || '/placeholder.svg'}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
+          <div className="flex gap-3">
+            {/* Thumbnails */}
+            {images.length > 1 && (
+              <div className="flex flex-col gap-2">
+                {images.map((img: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(idx)}
+                    className={`w-16 h-16 lg:w-20 lg:h-20 rounded-md overflow-hidden border-2 transition-all ${
+                      selectedImage === idx
+                        ? 'border-foreground'
+                        : 'border-border hover:border-muted-foreground'
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.title} ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
+            )}
+
+            {/* Main image */}
+            <div className="flex-1 rounded-md overflow-hidden bg-background">
+              <img
+                src={images[selectedImage] || '/placeholder.svg'}
+                alt={product.title}
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
 
           {/* Right: Product Info */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-3">{product.title}</h1>
-              
-              {/* Rating */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded">
-                  <span className="font-semibold">4.9</span>
-                  <Star className="w-3 h-3 fill-white" />
-                </div>
-                <span className="text-sm text-muted-foreground">Ratings</span>
+          <div className="space-y-4">
+            {/* Title */}
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">{product.title}</h1>
+            
+            {/* Rating */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-sm font-semibold">
+                <span>5.0</span>
+                <Star className="w-3 h-3 fill-white" />
               </div>
-
-              {/* Price */}
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl font-bold">₹{finalPrice.toFixed(0)}</span>
-                {product.discount_percent > 0 && (
-                  <>
-                    <span className="text-xl text-muted-foreground line-through">
-                      ₹{product.price_inr.toFixed(0)}
-                    </span>
-                    <Badge variant="destructive" className="text-sm">
-                      {product.discount_percent}%
-                    </Badge>
-                  </>
-                )}
-              </div>
-
-              {/* Share buttons */}
-              <div className="flex gap-2 mb-6">
-                <button
-                  onClick={() => shareProduct('whatsapp')}
-                  className="p-2 rounded-full border hover:bg-muted transition-colors"
-                  title="Share on WhatsApp"
-                >
-                  <MessageCircle className="w-5 h-5 text-green-600" />
-                </button>
-                <button
-                  onClick={() => shareProduct('facebook')}
-                  className="p-2 rounded-full border hover:bg-muted transition-colors"
-                  title="Share on Facebook"
-                >
-                  <Facebook className="w-5 h-5 text-blue-600" />
-                </button>
-              </div>
+              <span className="text-sm text-muted-foreground">Ratings</span>
             </div>
 
-            <hr />
+            {/* Price */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-2xl lg:text-3xl font-bold">₹ {finalPrice.toFixed(0)}</span>
+              {product.discount_percent > 0 && (
+                <>
+                  <span className="text-lg lg:text-xl text-muted-foreground line-through">
+                    ₹ {product.price_inr.toFixed(0)}
+                  </span>
+                  <Badge className="bg-[hsl(var(--accent))] text-white text-sm font-semibold">
+                    {product.discount_percent}%
+                  </Badge>
+                </>
+              )}
+            </div>
+
+            {/* Share buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => shareProduct('whatsapp')}
+                className="p-2.5 rounded-full hover:bg-muted transition-colors"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5 text-[#25D366]" />
+              </button>
+              <button
+                onClick={() => shareProduct('facebook')}
+                className="p-2.5 rounded-full hover:bg-muted transition-colors"
+                title="Share on Facebook"
+              >
+                <Facebook className="w-5 h-5 text-[#1877F2]" />
+              </button>
+            </div>
+
+            <hr className="my-4" />
 
             {/* Size Selection */}
             {sizes.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-semibold">
-                  Size: <span className="text-primary">{selectedSize}</span>
-                </h3>
+                <p className="text-sm font-medium">
+                  Size: <span className="font-semibold">{selectedSize}</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {sizes.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 border-2 rounded-lg font-medium transition-all ${
+                      className={`min-w-[70px] px-4 py-2 border rounded-md font-medium transition-all text-sm ${
                         selectedSize === size
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border hover:border-primary'
+                          ? 'border-foreground bg-foreground text-background'
+                          : 'border-border hover:border-foreground'
                       }`}
                     >
                       {size}
@@ -207,7 +203,7 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <hr />
+            <hr className="my-4" />
 
             {/* Action Buttons */}
             <div className="flex gap-3">
@@ -215,56 +211,77 @@ export default function ProductDetail() {
                 onClick={handleAddToCart}
                 variant="outline"
                 size="lg"
-                className="flex-1 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                className="flex-1 border-2 border-foreground text-foreground hover:bg-foreground hover:text-background font-semibold"
               >
                 Add
               </Button>
-              <Button onClick={handleBuyNow} size="lg" className="flex-1">
+              <Button 
+                onClick={handleBuyNow} 
+                size="lg" 
+                className="flex-1 bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/90 text-white font-semibold"
+              >
                 Buy Now
               </Button>
             </div>
 
             {/* Delivery Info */}
-            <div className="border rounded-lg p-4 space-y-2">
-              <h3 className="font-semibold">Delivery Options</h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <span className="text-2xl">🚚</span>
+            <div className="border rounded-md p-4">
+              <h3 className="font-semibold mb-2 text-sm">Delivery Options</h3>
+              <div className="flex items-start gap-2 text-sm">
+                <input 
+                  type="text" 
+                  placeholder="Enter your pincode" 
+                  className="flex-1 px-3 py-2 border rounded-md text-sm"
+                />
+                <Button variant="outline" size="sm" className="font-semibold">
+                  Check
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3 flex items-center gap-2">
+                <span className="text-xl">🚚</span>
                 Get delivery at your doorstep
               </p>
             </div>
 
-            {/* Product Details */}
+            <hr className="my-4" />
+
+            {/* Product Specifications */}
             {product.brand && (
               <div className="space-y-2">
-                <h3 className="font-semibold">Product Details</h3>
-                <div className="text-sm space-y-1">
-                  <p>
-                    <span className="font-medium">Brand:</span> {product.brand}
-                  </p>
-                  {product.category && (
-                    <p>
-                      <span className="font-medium">Category:</span>{' '}
-                      {product.category.name}
-                    </p>
-                  )}
+                <div className="text-sm">
+                  <span className="font-semibold">Upper body</span> : Synthetic leather, PU, Suede leather
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold">Lower body</span> : TPR (Thermoplastic Rubber)
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold">Closure</span> : Lace-ups
                 </div>
               </div>
             )}
 
+            <hr className="my-4" />
+
             {/* Description */}
-            {product.description && (
-              <div className="space-y-2">
-                <h3 className="font-semibold">Description:</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <h3 className="font-semibold text-sm">Description :</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {product.description || `The ${product.title} is a fresh addition to the iconic New Balance 550 series. Featuring a clean, minimal design with a stylish grey and black colorway, it offers great versatility for everyday wear. Known for its affordable price point, this sneaker doesn't compromise on quality. The build includes premium leather and suede details, delivering a sleek yet durable look. With decent comfort and a timeless aesthetic, it's a solid pick for both casual and streetwear styles.`}
+              </p>
+            </div>
+
+            {/* Care Instructions */}
+            <div className="space-y-2">
+              <h3 className="font-semibold text-sm">Care Instructions</h3>
+              <p className="text-sm text-muted-foreground">
+                Clean with less wet cloth, Don't wash in washing
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Reviews Section */}
-        <div className="mt-12">
+        <div className="mt-12 border-t pt-8">
           <ProductReviews productId={id!} />
         </div>
 
