@@ -71,14 +71,14 @@ export function Header() {
       </div>
 
       <header className="sticky top-0 z-50 w-full bg-white border-b">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 sm:px-6">
           {/* Main header with logo and icons */}
-          <div className="flex h-20 items-center justify-between">
+          <div className="flex h-16 sm:h-20 items-center justify-between">
             <div className="flex-1" />
             
             <Link to="/" className="flex items-center justify-center">
-              <span className="text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-                7<span className="block text-center -mt-2">KICKS.</span>
+              <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                7<span className="block text-center -mt-1 sm:-mt-2">KICKS.</span>
               </span>
             </Link>
 
@@ -86,16 +86,17 @@ export function Header() {
               <Button 
                 variant="ghost" 
                 size="icon"
+                className="h-9 w-9 sm:h-10 sm:w-10"
                 onClick={() => setSearchOpen(!searchOpen)}
               >
-                <Search className="h-6 w-6" />
+                <Search className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
               
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <User className="h-6 w-6" />
+                    <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                      <User className="h-5 w-5 sm:h-6 sm:w-6" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -118,17 +119,17 @@ export function Header() {
                 </DropdownMenu>
               ) : (
                 <Link to="/auth">
-                  <Button variant="ghost" size="icon">
-                    <User className="h-6 w-6" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                    <User className="h-5 w-5 sm:h-6 sm:w-6" />
                   </Button>
                 </Link>
               )}
               
-              <Link to="/cart">
-                <Button variant="ghost" size="icon" className="relative">
-                  <ShoppingCart className="h-6 w-6" />
+              <Link to="/cart" className="relative">
+                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
                   {itemCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center p-0 text-[10px] sm:text-xs">
                       {itemCount}
                     </Badge>
                   )}
@@ -138,10 +139,10 @@ export function Header() {
           </div>
 
           {/* Navigation menu */}
-          <nav className="border-t py-3">
-            <div className="flex items-center justify-center gap-8 text-sm">
+          <nav className="border-t py-3 sm:py-4 overflow-x-auto">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 text-xs sm:text-sm min-w-max px-4">
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-1 hover:text-primary transition-colors">
+                <DropdownMenuTrigger className="flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap">
                   <span>Category</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -158,23 +159,23 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <Link to="/shipping-policy" className="hover:text-primary transition-colors">
+              <Link to="/shipping-policy" className="hover:text-primary transition-colors whitespace-nowrap">
                 Shipping Policy
               </Link>
-              <Link to="/payment-policy" className="hover:text-primary transition-colors">
+              <Link to="/payment-policy" className="hover:text-primary transition-colors whitespace-nowrap">
                 Payment Policy
               </Link>
-              <Link to="/return-policy" className="hover:text-primary transition-colors">
+              <Link to="/return-policy" className="hover:text-primary transition-colors whitespace-nowrap">
                 Return and Refund Policy
               </Link>
-              <Link to="/about" className="hover:text-primary transition-colors">
+              <Link to="/about" className="hover:text-primary transition-colors whitespace-nowrap">
                 About Us
               </Link>
               <a 
                 href="https://instagram.com/7kicks" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
+                className="hover:text-primary transition-colors whitespace-nowrap"
               >
                 Follow 7Kicks on Instagram !!
               </a>
