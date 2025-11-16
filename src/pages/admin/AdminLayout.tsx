@@ -1,11 +1,12 @@
-import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Package, ShoppingCart, Settings, FolderTree, LogOut, Star, Package2 } from 'lucide-react';
+import { LogOut, Menu, Home } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AdminSidebar } from '@/components/AdminSidebar';
 
 export default function AdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
-  const location = useLocation();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -15,54 +16,42 @@ export default function AdminLayout() {
     return <Navigate to="/auth" replace />;
   }
 
-  const navItems = [
-    { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/products', icon: Package, label: 'Products' },
-    { path: '/admin/categories', icon: FolderTree, label: 'Categories' },
-    { path: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
-    { path: '/admin/reviews', icon: Star, label: 'Reviews' },
-    { path: '/admin/stock', icon: Package2, label: 'Stock Management' },
-    { path: '/admin/settings', icon: Settings, label: 'Settings' },
-  ];
-
   return (
-    <div className="min-h-screen bg-muted/10">
-      <div className="flex h-screen">
-        <aside className="w-64 bg-card border-r">
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-gradient">Admin Panel</h2>
-          </div>
-          <nav className="space-y-1 px-3">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link key={item.path} to={item.path}>
-                  <Button
-                    variant={isActive ? 'secondary' : 'ghost'}
-                    className="w-full justify-start"
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="absolute bottom-4 left-4 right-4">
-            <Button variant="outline" className="w-full" onClick={signOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        </aside>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-muted/10">
+        <AdminSidebar />
         
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto p-8">
-            <Outlet />
-          </div>
-        </main>
+        <div className="flex-1 flex flex-col w-full">
+          {/* Header */}
+          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex h-14 lg:h-16 items-center gap-4 px-4 lg:px-6">
+              <SidebarTrigger className="lg:hidden" />
+              <div className="flex-1 flex items-center justify-between">
+                <h1 className="text-lg lg:text-xl font-bold">Admin Panel</h1>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+                    <Link to="/">
+                      <Home className="h-4 w-4 mr-2" />
+                      <span className="hidden md:inline">View Store</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={signOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    <span className="hidden md:inline">Sign Out</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          {/* Main content */}
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto p-4 lg:p-8 max-w-7xl">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
