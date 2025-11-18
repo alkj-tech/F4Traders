@@ -88,22 +88,41 @@ export default function AdminProducts() {
     
     for (let i = 0; i < imageFiles.length; i++) {
       const file = imageFiles[i];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "your_preset"); // User needs to configure Cloudinary
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          resolve(base64);
+        };
+        reader.readAsDataURL(file);
+      });
 
       try {
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-        const data = await response.json();
-        uploadedUrls.push(data.secure_url);
+        const base64File = await base64Promise;
+        
+        const { data, error } = await supabase.functions.invoke('upload-to-cloudinary', {
+          body: { file: base64File, folder: 'products' }
+        });
+
+        if (error) {
+          console.error('Upload error:', error);
+          toast({
+            title: "Upload failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else if (data?.url) {
+          uploadedUrls.push(data.url);
+        }
       } catch (error) {
         console.error("Upload error:", error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload image",
+          variant: "destructive"
+        });
       }
     }
 

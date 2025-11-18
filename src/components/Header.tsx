@@ -13,6 +13,7 @@ import {
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "./ui/input";
+import { MobileMenu } from "./MobileMenu";
 
 export function Header() {
   const { user, isAdmin, signOut } = useAuth();
@@ -74,7 +75,9 @@ export function Header() {
         <div className="container mx-auto px-4 sm:px-6">
           {/* Main header with logo and icons */}
           <div className="flex h-16 sm:h-20 items-center justify-between">
-            <div className="flex-1" />
+            <div className="flex-1 flex items-center gap-2">
+              <MobileMenu />
+            </div>
             
             <Link to="/" className="flex items-center justify-center">
               <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
@@ -82,7 +85,7 @@ export function Header() {
               </span>
             </Link>
 
-            <div className="flex-1 flex items-center justify-end gap-4">
+            <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4">
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -139,7 +142,7 @@ export function Header() {
           </div>
 
           {/* Navigation menu */}
-          <nav className="border-t py-3 sm:py-4 overflow-x-auto">
+          <nav className="hidden lg:block border-t py-3 sm:py-4 overflow-x-auto">
             <div className="flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 text-xs sm:text-sm min-w-max px-4">
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap">
@@ -185,15 +188,15 @@ export function Header() {
 
         {/* Search overlay */}
         {searchOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setSearchOpen(false)}>
-            <div className="bg-white max-w-2xl mx-auto mt-4" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center pt-20" onClick={() => setSearchOpen(false)}>
+            <div className="bg-white rounded-lg max-w-3xl w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="relative border-b">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                 <Input
                   placeholder="Search for a product"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-12 h-14 text-base border-0 focus-visible:ring-0"
+                  className="pl-16 pr-16 h-16 text-lg border-0 focus-visible:ring-0 rounded-t-lg"
                   autoFocus
                 />
                 <button
@@ -202,9 +205,9 @@ export function Header() {
                     setSearchQuery("");
                     setSearchResults([]);
                   }}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2"
+                  className="absolute right-6 top-1/2 transform -translate-y-1/2 hover:bg-muted rounded-full p-2 transition-colors"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
