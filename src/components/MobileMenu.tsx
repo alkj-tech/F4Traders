@@ -226,17 +226,6 @@ export function MobileMenu() {
                 </div>
                 <span className="mt-1">Email</span>
               </a>
-
-              <Link
-                to="/auth"
-                onClick={handleClose}
-                className="flex flex-col items-center text-xs text-gray-700"
-              >
-                <div className="rounded-full p-2 bg-muted/20">
-                  <User className="h-5 w-5" />
-                </div>
-                <span className="mt-1">Account</span>
-              </Link>
             </div>
           </div>
         </div>

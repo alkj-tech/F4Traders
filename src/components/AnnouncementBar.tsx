@@ -2,9 +2,9 @@ export function AnnouncementBar() {
   return (
     <div className="bg-black text-white py-2 overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-8 text-sm">
+        <div className="flex flex-col justify-center items-center text-center gap-2 text-sm">
           {/* Sliding text */}
-          <div className="w-full md:w-auto overflow-hidden">
+          <div className="w-full overflow-hidden">
             <span className="announcement-marquee">
               Free Shipping On All Prepaid Orders
             </span>

@@ -1,14 +1,18 @@
-import { Navigate, Outlet, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { LogOut, Home } from 'lucide-react';
-import { AdminSidebar } from '@/components/AdminSidebar';
+import { Navigate, Outlet, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { LogOut, Home } from "lucide-react";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 export default function AdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
 
   if (!user || !isAdmin) {
@@ -17,19 +21,13 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen flex w-full bg-muted/10">
-      
-      {/* ⬇️ Admin Sidebar (Now Mobile Sheet Menu) */}
-      <div className="lg:hidden">
-        <AdminSidebar />
-      </div>
+      <AdminSidebar />
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col w-full">
-
         {/* HEADER */}
         <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 lg:h-16 items-center gap-4 px-4 lg:px-6">
-
             {/* ⬇️ Mobile Sidebar Trigger (Already included inside AdminSidebar) */}
             {/* No SidebarTrigger needed anymore */}
 
@@ -37,7 +35,12 @@ export default function AdminLayout() {
               <h1 className="text-lg lg:text-xl font-bold">Admin Panel</h1>
 
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="hidden sm:flex"
+                >
                   <Link to="/">
                     <Home className="h-4 w-4 mr-2" />
                     <span className="hidden md:inline">View Store</span>

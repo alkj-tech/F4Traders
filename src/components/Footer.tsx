@@ -1,107 +1,135 @@
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Footer() {
   return (
-    <footer className="border-t bg-secondary/30">
-      <div className="container py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-bold">F4traders</h3>
-            <p className="text-sm text-muted-foreground">
-              Your destination for premium footwear. Step into style with our curated collection.
-            </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h4 className="font-semibold">Quick Links</h4>
-            <ul className="space-y-2 text-sm">
+    <footer className="bg-gray-100 border-t">
+      <div className="container mx-auto px-6 py-10">
+        {/* GRID LAYOUT */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* QUICK LINKS */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-4">Quick Links</h3>
+            <ul className="space-y-3 text-sm text-gray-700">
               <li>
-                <Link to="/products" className="text-muted-foreground hover:text-accent transition-colors">
-                  Shop All
+                <Link to="/" className="hover:text-black">
+                  Home
                 </Link>
               </li>
               <li>
-                <Link to="/categories" className="text-muted-foreground hover:text-accent transition-colors">
-                  Categories
+                <Link to="/my-addresses" className="hover:text-black">
+                  My Account
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-muted-foreground hover:text-accent transition-colors">
+                <Link to="/my-orders" className="hover:text-black">
+                  My Orders
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="hover:text-black">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-accent transition-colors">
-                  Contact
+                <Link to="/payment-policy" className="hover:text-black">
+                  Payment Policy
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Customer Service */}
-          <div className="space-y-4">
-            <h4 className="font-semibold">Customer Service</h4>
-            <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/shipping" className="text-muted-foreground hover:text-accent transition-colors">
+                <Link to="/return-policy" className="hover:text-black">
+                  Return & Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/shipping-policy" className="hover:text-black">
                   Shipping Policy
                 </Link>
               </li>
               <li>
-                <Link to="/returns" className="text-muted-foreground hover:text-accent transition-colors">
-                  Returns & Exchanges
+                <Link to="/terms" className="hover:text-black">
+                  Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-accent transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-accent transition-colors">
-                  Terms of Service
+                <Link to="/contact" className="hover:text-black">
+                  Contact Us
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h4 className="font-semibold">Contact Us</h4>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-center space-x-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>contact@F4traders.com</span>
+          {/* CONTACT INFO */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-4">Get In Touch</h3>
+            <ul className="space-y-4 text-sm text-gray-700">
+              <li className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-gray-600" />
+                +91 1234567890
               </li>
-              <li className="flex items-center space-x-2 text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span>+91 1234567890</span>
+              <li className="flex items-center gap-3">
+                <Mail className="h-4 w-4 text-gray-600" />
+                <a
+                  href="mailto:contact@f4traders.com"
+                  className="hover:text-black"
+                >
+                  contact@f4traders.com
+                </a>
               </li>
-              <li className="flex items-start space-x-2 text-muted-foreground">
-                <MapPin className="h-4 w-4 mt-0.5" />
-                <span>Chennai, Tamil Nadu, India</span>
+              <li className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 text-gray-600" />
+                Chennai, Tamil Nadu, India
               </li>
             </ul>
+          </div>
+
+          {/* PAYMENT METHODS */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-4">We Accept</h3>
+            <div className="flex items-center gap-3">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/4/41/Visa_Logo.png"
+                className="h-6 bg-white p-1 rounded shadow"
+                alt="Visa"
+              />
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png"
+                className="h-6 bg-white p-1 rounded shadow"
+                alt="Mastercard"
+              />
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/6/6f/UPI_logo.svg"
+                className="h-6 bg-white p-1 rounded shadow"
+                alt="UPI"
+              />
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/c/cb/Rupay-Logo.png"
+                className="h-6 bg-white p-1 rounded shadow"
+                alt="Rupay"
+              />
+            </div>
+          </div>
+
+          {/* SOCIAL */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-4">Social</h3>
+            <a
+              href="#"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-black"
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+                className="h-5 w-5"
+                alt="Instagram"
+              />
+              Instagram
+            </a>
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} F4traders. All rights reserved.</p>
+        {/* COPYRIGHT */}
+        <div className="text-center py-5 mt-10 border-t text-sm text-gray-500">
+          © {new Date().getFullYear()} F4traders. All rights reserved.
         </div>
       </div>
     </footer>

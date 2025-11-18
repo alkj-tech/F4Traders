@@ -27,6 +27,8 @@ import AdminSettings from "./pages/admin/Settings";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminStock from "./pages/admin/Stock";
 import NotFound from "./pages/NotFound";
+import MyAccount from "./pages/MyAccount";
+import MobileBottomMenu from "./components/MobileBottomMenu";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/track-order" element={<TrackOrder />} />
               <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/account" element={<MyAccount />} />
               <Route path="/my-addresses" element={<MyAddresses />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
@@ -63,6 +66,7 @@ const App = () => (
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <MobileBottomMenu />
           </TooltipProvider>
         </CartProvider>
       </AuthProvider>
