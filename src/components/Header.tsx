@@ -38,20 +38,22 @@ export function Header() {
 
   const fetchCategories = async () => {
     const { data } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order');
-    
+      .from("categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order");
+
     setCategories(data || []);
   };
 
   const searchProducts = async () => {
     const { data } = await supabase
-      .from('products')
-      .select('*, category:categories(*)')
-      .eq('is_active', true)
-      .or(`title.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      .from("products")
+      .select("*, category:categories(*)")
+      .eq("is_active", true)
+      .or(
+        `title.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+      )
       .limit(5);
 
     setSearchResults(data || []);
@@ -66,39 +68,81 @@ export function Header() {
 
   return (
     <>
-      {/* Top announcement bar */}
-      <div className="bg-black text-white text-center py-2 text-sm">
-        Cash on delivery and 3 Days easy replacement available
-      </div>
-
       <header className="sticky top-0 z-50 w-full bg-white border-b">
         <div className="container mx-auto px-4 sm:px-6">
-          {/* Main header with logo and icons */}
+          {/* Main header */}
           <div className="flex h-16 sm:h-20 items-center justify-between">
+            {/* Left */}
             <div className="flex-1 flex items-center gap-2">
               <MobileMenu />
             </div>
-            
-            <Link to="/" className="flex items-center justify-center">
-              <span className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-                7<span className="block text-center -mt-1 sm:-mt-2">KICKS.</span>
-              </span>
-            </Link>
 
+            {/* Center Logo */}
+            {!searchOpen && (
+              <Link to="/" className="flex items-center justify-center">
+                <span
+                  className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight"
+                  style={{ fontFamily: "Arial Black, sans-serif" }}
+                >
+                  F4
+                  <span className="block text-center -mt-1 sm:-mt-2">
+                    Traders.
+                  </span>
+                </span>
+              </Link>
+            )}
+
+            {/* Right Icons */}
             <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-9 w-9 sm:h-10 sm:w-10"
-                onClick={() => setSearchOpen(!searchOpen)}
-              >
-                <Search className="h-5 w-5 sm:h-6 sm:w-6" />
-              </Button>
-              
+              {/* INLINE SEARCH BAR */}
+              <div className="relative flex items-center">
+                {!searchOpen && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSearchOpen(true)}
+                    className="transition-all duration-300"
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                )}
+
+                {searchOpen && (
+                  <div className="flex items-center gap-2 w-[220px] sm:w-[300px] transition-all duration-300">
+                    <Search className="h-5 w-5 text-muted-foreground" />
+
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search for a product"
+                      className="h-10 w-full text-sm"
+                      autoFocus
+                    />
+
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setSearchOpen(false);
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }}
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* USER ICON */}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 sm:h-10 sm:w-10"
+                    >
                       <User className="h-5 w-5 sm:h-6 sm:w-6" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -117,19 +161,30 @@ export function Header() {
                         <Link to="/admin">Admin Dashboard</Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={signOut}>Sign Out</DropdownMenuItem>
+                    <DropdownMenuItem onClick={signOut}>
+                      Sign Out
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <Link to="/auth">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 sm:h-10 sm:w-10"
+                  >
                     <User className="h-5 w-5 sm:h-6 sm:w-6" />
                   </Button>
                 </Link>
               )}
-              
+
+              {/* CART ICON */}
               <Link to="/cart" className="relative">
-                <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 sm:h-10 sm:w-10"
+                >
                   <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
                   {itemCount > 0 && (
                     <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center p-0 text-[10px] sm:text-xs">
@@ -161,24 +216,24 @@ export function Header() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              
-              <Link to="/shipping-policy" className="hover:text-primary transition-colors whitespace-nowrap">
+
+              <Link to="/shipping-policy" className="hover:text-primary">
                 Shipping Policy
               </Link>
-              <Link to="/payment-policy" className="hover:text-primary transition-colors whitespace-nowrap">
+              <Link to="/payment-policy" className="hover:text-primary">
                 Payment Policy
               </Link>
-              <Link to="/return-policy" className="hover:text-primary transition-colors whitespace-nowrap">
-                Return and Refund Policy
+              <Link to="/return-policy" className="hover:text-primary">
+                Return & Refund Policy
               </Link>
-              <Link to="/about" className="hover:text-primary transition-colors whitespace-nowrap">
+              <Link to="/about" className="hover:text-primary">
                 About Us
               </Link>
-              <a 
-                href="https://instagram.com/7kicks" 
-                target="_blank" 
+              <a
+                href="https://instagram.com/7kicks"
+                target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-primary transition-colors whitespace-nowrap"
+                className="hover:text-primary whitespace-nowrap"
               >
                 Follow 7Kicks on Instagram !!
               </a>
@@ -186,78 +241,34 @@ export function Header() {
           </nav>
         </div>
 
-        {/* Search overlay */}
-        {searchOpen && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center pt-20" onClick={() => setSearchOpen(false)}>
-            <div className="bg-white rounded-lg max-w-3xl w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="relative border-b">
-                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground" />
-                <Input
-                  placeholder="Search for a product"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-16 pr-16 h-16 text-lg border-0 focus-visible:ring-0 rounded-t-lg"
-                  autoFocus
-                />
+        {/* INLINE SEARCH RESULTS DROPDOWN */}
+        {searchOpen && searchQuery.length > 1 && (
+          <div className="absolute left-0 right-0 bg-white shadow-md border z-40 max-w-xl mx-auto mt-2 p-2 rounded">
+            {searchResults.length === 0 ? (
+              <p className="text-sm p-2 text-muted-foreground">
+                No results for "{searchQuery}"
+              </p>
+            ) : (
+              searchResults.map((product) => (
                 <button
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setSearchQuery("");
-                    setSearchResults([]);
-                  }}
-                  className="absolute right-6 top-1/2 transform -translate-y-1/2 hover:bg-muted rounded-full p-2 transition-colors"
+                  key={product.id}
+                  onClick={() => handleSearchResultClick(product.id)}
+                  className="flex w-full items-center gap-3 p-2 hover:bg-muted rounded transition"
                 >
-                  <X className="h-6 w-6" />
+                  <img
+                    src={product.images?.[0] || "/placeholder.svg"}
+                    alt={product.title || "Product image"}
+                    className="w-12 h-12 rounded object-cover"
+                  />
+                  <div className="text-left">
+                    <p className="font-medium text-sm">{product.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {product.category?.name}
+                    </p>
+                  </div>
                 </button>
-              </div>
-
-              {searchQuery.length > 1 && (
-                <div className="max-h-96 overflow-y-auto">
-                  {searchResults.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No products found for "{searchQuery}"
-                    </div>
-                  ) : (
-                    <div className="py-2">
-                      {searchResults.map((product) => {
-                        const images = product.images || [];
-                        const finalPrice = product.price_inr * (1 - product.discount_percent / 100);
-
-                        return (
-                          <button
-                            key={product.id}
-                            onClick={() => handleSearchResultClick(product.id)}
-                            className="w-full flex items-center gap-4 p-3 hover:bg-muted transition-colors text-left"
-                          >
-                            <img
-                              src={images[0] || '/placeholder.svg'}
-                              alt={product.title}
-                              className="w-16 h-16 object-cover rounded"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium truncate">{product.title}</h4>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {product.category?.name || 'Uncategorized'}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="font-bold">
-                                  ₹{finalPrice.toFixed(0)}
-                                </span>
-                                {product.discount_percent > 0 && (
-                                  <span className="text-sm text-muted-foreground line-through">
-                                    ₹{product.price_inr.toFixed(0)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              ))
+            )}
           </div>
         )}
       </header>

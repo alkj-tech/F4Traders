@@ -290,7 +290,7 @@ export default function MyAddresses() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <input
+                <Input
                   type="checkbox"
                   id="is_default"
                   checked={formData.is_default}

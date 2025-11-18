@@ -104,10 +104,10 @@ export default function TrackOrder() {
     <div className="min-h-screen flex flex-col">
       <AnnouncementBar />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-12">
+       <main className="flex-1 container mx-auto px-4 py-12">
         <h1 className="text-4xl font-bold mb-8 text-center">Track Your Order</h1>
 
-        <Card className="max-w-2xl mx-auto mb-8">
+       {/* <Card className="max-w-2xl mx-auto mb-8">
           <CardHeader>
             <CardTitle>Enter Order Details</CardTitle>
             <CardDescription>
@@ -136,7 +136,7 @@ export default function TrackOrder() {
               {loading ? "Tracking..." : "Track Order"}
             </Button>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {orderData && (
           <Card className="max-w-2xl mx-auto">

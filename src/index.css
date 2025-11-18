@@ -54,9 +54,21 @@ All colors MUST be HSL.
     --brand-light-gray: 0 0% 96%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 10%) 0%, hsl(0 0% 20%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(14 100% 55%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(0 0% 10%) 0%,
+      hsl(0 0% 20%) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(24 100% 50%) 0%,
+      hsl(14 100% 55%) 100%
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      hsl(0 0% 100%) 0%,
+      hsl(0 0% 98%) 100%
+    );
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
@@ -126,11 +138,16 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: 'cv11', 'ss01';
+    font-feature-settings: "cv11", "ss01";
     font-optical-sizing: auto;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold tracking-tight;
   }
 }
@@ -167,4 +184,20 @@ All colors MUST be HSL.
       transform: translateY(0);
     }
   }
+}
+
+/* globals.css (or index.css) */
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.announcement-marquee {
+  display: inline-block; /* important */
+  white-space: nowrap; /* important */
+  animation: marquee 10s linear infinite;
 }

@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,10 +15,10 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [isSignUp, setIsSignUp] = useState(true);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,8 +41,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         });
 
         if (error) throw error;
-        
-        toast.success('Account created! Please check your email to verify.');
+
+        toast.success("Account created! Please check your email to verify.");
         onSuccess?.();
         onClose();
       } else {
@@ -53,13 +53,13 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         });
 
         if (error) throw error;
-        
-        toast.success('Welcome back!');
+
+        toast.success("Welcome back!");
         onSuccess?.();
         onClose();
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      toast.error(error.message || "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -67,19 +67,28 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[440px] p-0 gap-0">
+      <DialogContent
+        className="
+      p-0 gap-0 
+      mx-auto 
+      sm:max-w-[440px] 
+      w-[90%]
+      translate-x-0 !left-1/2 !-translate-x-1/2
+      rounded-lg
+    "
+      >
         <div className="relative bg-card rounded-lg">
-          <button
+          {/* <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none"
           >
             <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </button>
+            <span >Close</span>
+          </button> */}
 
           <div className="p-8">
             <h2 className="text-2xl font-semibold text-center mb-8">
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+              {isSignUp ? "Sign Up" : "Sign In"}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -153,7 +162,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                 disabled={loading}
                 className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
               >
-                {loading ? 'Processing...' : isSignUp ? 'SIGN UP' : 'SIGN IN'}
+                {loading ? "Processing..." : isSignUp ? "SIGN UP" : "SIGN IN"}
               </Button>
             </form>
 
@@ -165,11 +174,13 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               >
                 {isSignUp ? (
                   <>
-                    Already have an account? <span className="font-semibold">Sign In</span>
+                    Already have an account?{" "}
+                    <span className="font-semibold">Sign In</span>
                   </>
                 ) : (
                   <>
-                    Don't have an account? <span className="font-semibold">Sign Up</span>
+                    Don't have an account?{" "}
+                    <span className="font-semibold">Sign Up</span>
                   </>
                 )}
               </button>
