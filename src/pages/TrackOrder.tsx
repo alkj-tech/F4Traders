@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
@@ -8,13 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Truck, CheckCircle, Clock } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 export default function TrackOrder() {
-  const [orderNo, setOrderNo] = useState("");
+  const [searchParams] = useSearchParams();
+  const orderParam = searchParams.get("order");
+  
+  const [orderNo, setOrderNo] = useState(orderParam || "");
   const [trackingNo, setTrackingNo] = useState("");
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (orderParam) {
+      handleTrack();
+    }
+  }, [orderParam]);
 
   const handleTrack = async () => {
     if (!orderNo && !trackingNo) {
