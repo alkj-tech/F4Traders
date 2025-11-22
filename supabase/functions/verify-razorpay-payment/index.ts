@@ -22,6 +22,8 @@ serve(async (req) => {
       orderId,
     });
 
+    
+
     const secret = Deno.env.get("RAZORPAY_KEY_SECRET");
     if (!secret) throw new Error("Secret missing");
 
@@ -46,6 +48,12 @@ serve(async (req) => {
     const expectedSignature = Array.from(new Uint8Array(signatureBytes))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
+
+      console.log("EXPECTED_SIGNATURE:", expectedSignature);
+console.log("RECEIVED_SIGNATURE:", razorpay_signature);
+console.log("ORDER_ID:", razorpay_order_id);
+console.log("PAYMENT_ID:", razorpay_payment_id);
+
 
     console.log("EXPECTED:", expectedSignature);
     console.log("RECEIVED:", razorpay_signature);
