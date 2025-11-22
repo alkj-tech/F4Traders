@@ -151,7 +151,7 @@ export function Header() {
                       <Link to="/my-orders">My Orders</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/my-addresses">My Addresses</Link>
+                      <Link to="/account">My Account</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/track-order">Track Order</Link>
@@ -230,12 +230,12 @@ export function Header() {
                 About Us
               </Link>
               <a
-                href="https://instagram.com/7kicks"
+                href="https://instagram.com/F4Traders"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary whitespace-nowrap"
               >
-                Follow 7Kicks on Instagram !!
+                Follow F4Traders on Instagram !!
               </a>
             </div>
           </nav>

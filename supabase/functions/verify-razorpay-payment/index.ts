@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -12,60 +13,78 @@ serve(async (req) => {
   }
 
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = await req.json();
+    const body = await req.json();
 
-    const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
-    if (!razorpayKeySecret) {
-      throw new Error("Razorpay secret not configured");
-    }
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      orderId,
+    } = body;
 
-    // Verify signature - simple hex comparison
+    console.log("INPUT PAYLOAD:", body);
+
+    const secret = Deno.env.get("RAZORPAY_KEY_SECRET");
+    if (!secret) throw new Error("Secret missing");
+
+    // ----------------------------
+    // ✅ Correct HMAC SHA256 verification
+    // ----------------------------
     const text = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(razorpayKeySecret + text);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const expectedSignature = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-    if (expectedSignature !== razorpay_signature) {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signatureBytes = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(text)
+    );
+
+    const expected = Array.from(new Uint8Array(signatureBytes))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    console.log("EXPECTED SIG:", expected);
+    console.log("RECEIVED SIG:", razorpay_signature);
+
+    if (expected !== razorpay_signature) {
       throw new Error("Invalid payment signature");
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // ----------------------------
+    // Supabase update
+    // ----------------------------
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    // Update order
-    const { error: orderError } = await supabase
+    const { error } = await supabase
       .from("orders")
       .update({
         payment_status: "completed",
+        order_status: "confirmed",
         razorpay_order_id,
         razorpay_payment_id,
-        order_status: "confirmed",
       })
       .eq("id", orderId);
 
-    if (orderError) throw orderError;
-
-    // Trigger invoice generation and email
-    await supabase.functions.invoke("generate-invoice", {
-      body: { orderId },
-    });
-
-    console.log("Payment verified and order updated:", orderId);
+    if (error) throw error;
 
     return new Response(
-      JSON.stringify({ success: true, message: "Payment verified successfully" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: true }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
-    console.error("Error verifying payment:", error);
+  } catch (err) {
+    console.error("FUNCTION ERROR:", err);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: `${err.message}` }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

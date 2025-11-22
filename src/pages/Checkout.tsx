@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Navigate, useNavigate } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -18,20 +17,81 @@ declare global {
   }
 }
 
+interface AddressRow {
+  id: number;
+  user_id: string;
+  full_name: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  pincode: string;
+  is_default?: boolean;
+  created_at?: string;
+}
+
 export default function Checkout() {
   const { items, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('cod');
   const [address, setAddress] = useState({
-    fullName: '',
-    phone: '',
-    street: '',
-    city: '',
-    state: '',
-    pincode: '',
+    fullName: "",
+    phone: "",
+    street: "",
+    city: "",
+    state: "",
+    pincode: "",
   });
+
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
+
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        if (!user) return;
+
+        let { data, error } = await supabase
+          .from("user_addresses")
+          .select(
+            "id,user_id,full_name,phone,street,city,state,pincode,is_default,created_at"
+          )
+          .eq("user_id", user.id)
+          .eq("is_default", true)
+          .single();
+
+        // If no default found (PostgREST returns PGRST116), fetch latest address
+        if (error && (error as any).code === "PGRST116") {
+          const { data: fallback, error: fallbackError } = await supabase
+            .from("user_addresses")
+            .select(
+              "id,user_id,full_name,phone,street,city,state,pincode,created_at"
+            )
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (fallback && !fallbackError) data = fallback as any;
+        }
+
+        if (data) {
+          setAddress({
+            fullName: data.full_name || "",
+            phone: data.phone || "",
+            street: data.street || "",
+            city: data.city || "",
+            state: data.state || "",
+            pincode: data.pincode || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch address", err);
+      }
+    };
+
+    fetchAddress();
+  }, [user]);
 
   if (!user) {
     return <Navigate to="/auth" replace />;
@@ -54,7 +114,7 @@ export default function Checkout() {
       const itemSubtotal = product.price_inr * item.quantity;
       const itemDiscount = itemSubtotal * (product.discount_percent / 100);
       const discountedPrice = itemSubtotal - itemDiscount;
-      
+
       subtotal += itemSubtotal;
       discountTotal += itemDiscount;
       gstTotal += discountedPrice * (product.gst_percent / 100);
@@ -62,14 +122,14 @@ export default function Checkout() {
     });
 
     const total = subtotal - discountTotal + gstTotal + cgstTotal;
-    
+
     return { subtotal, discountTotal, gstTotal, cgstTotal, total };
   };
 
   const totals = calculateTotals();
 
-  const createOrder = async () => {
-    const orderItems = items.map(item => ({
+  const createOrder = async (shippingAddress: any) => {
+    const orderItems = items.map((item) => ({
       product_id: item.product.id,
       product_name: item.product.title,
       quantity: item.quantity,
@@ -79,26 +139,31 @@ export default function Checkout() {
       cgst_percent: item.product.cgst_percent,
       size: item.size,
       color: item.color,
-      total_price: item.product.price_inr * item.quantity * (1 - item.product.discount_percent / 100),
+      total_price:
+        item.product.price_inr *
+        item.quantity *
+        (1 - item.product.discount_percent / 100),
     }));
 
     const orderNo = `ORD-${Date.now()}`;
 
     const { data: order, error } = await supabase
-      .from('orders')
-      .insert([{
-        order_no: orderNo,
-        user_id: user!.id,
-        items: orderItems as any,
-        subtotal: totals.subtotal,
-        discount_total: totals.discountTotal,
-        gst_total: totals.gstTotal,
-        cgst_total: totals.cgstTotal,
-        total_amount: totals.total,
-        shipping_address: address as any,
-        payment_status: paymentMethod === 'cod' ? 'pending' : 'pending',
-        order_status: 'pending',
-      }])
+      .from("orders")
+      .insert([
+        {
+          order_no: orderNo,
+          user_id: user!.id,
+          items: orderItems as any,
+          subtotal: totals.subtotal,
+          discount_total: totals.discountTotal,
+          gst_total: totals.gstTotal,
+          cgst_total: totals.cgstTotal,
+          total_amount: totals.total,
+          shipping_address: shippingAddress as any,
+          payment_status: "pending",
+          order_status: "pending",
+        },
+      ])
       .select()
       .single();
 
@@ -106,57 +171,130 @@ export default function Checkout() {
     return order;
   };
 
+  // Load Razorpay SDK dynamically
+  const loadRazorpayScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).Razorpay) return resolve();
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Razorpay SDK failed to load"));
+      document.body.appendChild(script);
+    });
+  };
+
   const handleRazorpayPayment = async (order: any) => {
     try {
-      const { data: razorpayOrder } = await supabase.functions.invoke('create-razorpay-order', {
-        body: {
-          amount: totals.total,
-          currency: 'INR',
-          receipt: order.order_no,
-        },
-      });
+      // Ensure publishable key is available at runtime
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      console.log("Using Razorpay Key ID:", keyId);
+      if (!keyId) {
+        // clearer message and checks for the correct env var name
+        throw new Error(
+          "Razorpay Key ID (VITE_RAZORPAY_KEY_ID) missing in client env. Please add it to your .env and redeploy."
+        );
+      }
 
-      if (!razorpayOrder) throw new Error('Failed to create Razorpay order');
+      await loadRazorpayScript();
+
+      // IMPORTANT: your Edge Function multiplies amount * 100 already.
+      // So send the amount in RUPEES (not paise) and let the server convert to paise.
+      // Previously you were sending paise and server was multiplying again -> huge value -> 500.
+      const payload = {
+        amount: Number(totals.total), // rupees (server will do Math.round(amount * 100))
+        currency: "INR",
+        receipt: order.order_no,
+      };
+
+      // call the Edge Function
+      let razorpayOrder: any = null;
+
+      try {
+        const invokeResult = await supabase.functions.invoke(
+          "create-razorpay-order",
+          {
+            body: payload,
+          }
+        );
+
+        // supabase.functions.invoke may return different shapes depending on client version:
+        // - older SDK: { data, error }
+        // - newer SDK: returns Response-like or throws FunctionsHttpError
+        // handle both:
+        if ((invokeResult as any).data) {
+          // shape: { data, error }
+          const { data, error } = invokeResult as any;
+          if (error) throw error;
+          razorpayOrder = data;
+        } else if ((invokeResult as any).status && (invokeResult as any).json) {
+          // if it is a Response object
+          const resp = invokeResult as Response;
+          const json = await resp.json();
+          if (!resp.ok) throw new Error(json?.error || JSON.stringify(json));
+          razorpayOrder = json;
+        } else {
+          // fallback: assume the invoke result is the order object
+          razorpayOrder = invokeResult;
+        }
+      } catch (fnError: any) {
+        console.error("Edge function (create-razorpay-order) failed:", fnError);
+        // try to surface message returned by the function (if any)
+        const message = fnError?.message || JSON.stringify(fnError);
+        throw new Error(`Payment server error: ${message}`);
+      }
+
+      // Basic validation
+      if (!razorpayOrder || !razorpayOrder.id) {
+        console.error("Invalid razorpay order response:", razorpayOrder);
+        throw new Error("Failed to create Razorpay order from server");
+      }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        name: 'F4TRADERS',
+        key: keyId,
+        amount: razorpayOrder.amount, // should be paise (server returns paise)
+        currency: razorpayOrder.currency || "INR",
+        name: "F4TRADERS",
         description: `Order ${order.order_no}`,
         order_id: razorpayOrder.id,
         handler: async function (response: any) {
           try {
-            // Reduce stock for each item
+            // Reduce stock
             for (const item of items) {
               const { data: product } = await supabase
-                .from('products')
-                .select('stock')
-                .eq('id', item.product.id)
+                .from("products")
+                .select("stock")
+                .eq("id", item.product.id)
                 .single();
 
               if (product) {
                 await supabase
-                  .from('products')
+                  .from("products")
                   .update({ stock: product.stock - item.quantity })
-                  .eq('id', item.product.id);
+                  .eq("id", item.product.id);
               }
             }
 
-            await supabase.functions.invoke('verify-razorpay-payment', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                orderId: order.id,
-              },
-            });
+            // Ask your edge function to verify signature and update order
+            const { error: verifyError } = await supabase.functions.invoke(
+              "verify-razorpay-payment",
+              {
+                body: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  orderId: order.id,
+                },
+              }
+            );
+
+            if (verifyError) throw verifyError;
 
             await clearCart();
-            toast.success('Payment successful! Order placed.');
-            navigate('/track-order');
-          } catch (error) {
-            toast.error('Payment verification failed');
+            toast.success("Payment successful! Order placed.");
+            navigate("/track-order");
+          } catch (err) {
+            console.error("Post-payment error", err);
+            toast.error("Payment verification failed");
           }
         },
         prefill: {
@@ -164,62 +302,43 @@ export default function Checkout() {
           contact: address.phone,
         },
         theme: {
-          color: '#000000',
+          color: "#000000",
         },
       };
 
       const razorpay = new window.Razorpay(options);
       razorpay.open();
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error("Razorpay error", error);
+      // display clean error to the user and keep the error in console for debugging
+      toast.error(error.message || "Razorpay checkout failed");
+      // do not rethrow: we want the UI to recover gracefully
     }
   };
 
-  const handleCODPayment = async (order: any) => {
-    try {
-      // Reduce stock for each item
-      for (const item of items) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product.id)
-          .single();
-
-        if (product) {
-          await supabase
-            .from('products')
-            .update({ stock: product.stock - item.quantity })
-            .eq('id', item.product.id);
-        }
-      }
-
-      await supabase.functions.invoke('generate-invoice', {
-        body: { orderId: order.id },
-      });
-
-      await clearCart();
-      toast.success('Order placed successfully! You will receive confirmation email shortly.');
-      navigate('/track-order');
-    } catch (error) {
-      toast.error('Failed to process order');
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!addressConfirmed) {
+      toast.error(
+        "Please confirm the delivery address before placing the order."
+      );
+      return;
     }
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setLoading(true);
 
     try {
-      const order = await createOrder();
-
-      if (paymentMethod === 'razorpay') {
-        await handleRazorpayPayment(order);
-      } else {
-        await handleCODPayment(order);
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast.error('Checkout failed. Please try again.');
+      const order = await createOrder(address);
+      // Only Razorpay flow is supported in production right now
+      await handleRazorpayPayment(order);
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      // surface meaningful message if available
+      toast.error(
+        error?.message?.startsWith("Payment server error:")
+          ? "Payment server error. Check logs."
+          : "Checkout failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -230,94 +349,54 @@ export default function Checkout() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Shipping Address</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      value={address.fullName}
-                      onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={address.phone}
-                      onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                      required
-                    />
+              <h2 className="text-xl font-bold mb-4">Delivery Address</h2>
+
+              <div className="space-y-2">
+                <div className="p-4 border rounded-lg">
+                  <div className="font-semibold">{address.fullName || "—"}</div>
+                  <div className="text-sm">{address.phone || "—"}</div>
+                  <div className="text-sm">
+                    {address.street}, {address.city}, {address.state} -{" "}
+                    {address.pincode}
                   </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="street">Street Address *</Label>
-                  <Input
-                    id="street"
-                    value={address.street}
-                    onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                    required
+
+                <label className="inline-flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={addressConfirmed}
+                    onChange={(e) => setAddressConfirmed(e.target.checked)}
                   />
+                  <span>Confirm delivery address</span>
+                </label>
+
+                <div className="text-sm text-muted-foreground">
+                  If you want to use a different address, please update it from
+                  your account addresses page before placing the order.
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input
-                      id="city"
-                      value={address.city}
-                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State *</Label>
-                    <Input
-                      id="state"
-                      value={address.state}
-                      onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pincode">Pincode *</Label>
-                    <Input
-                      id="pincode"
-                      value={address.pincode}
-                      onChange={(e) => setAddress({ ...address, pincode: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </form>
+              </div>
             </Card>
 
             <Card className="p-6 mt-6">
               <h2 className="text-xl font-bold mb-4">Payment Method</h2>
-              <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg mb-3 hover:border-primary transition-colors cursor-pointer">
-                  <RadioGroupItem value="cod" id="cod" />
-                  <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                    <div className="font-semibold">Cash on Delivery</div>
-                    <div className="text-sm text-muted-foreground">Pay when you receive the order</div>
-                  </Label>
+
+              {/* ONLY Razorpay enabled - COD disabled until further notice */}
+              <div className="p-4 border rounded-lg mb-3">
+                <div className="font-semibold">Razorpay (Online Payment)</div>
+                <div className="text-sm text-muted-foreground">
+                  Pay securely with card, UPI, net banking.
                 </div>
-                <div className="flex items-center space-x-2 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer">
-                  <RadioGroupItem value="razorpay" id="razorpay" />
-                  <Label htmlFor="razorpay" className="flex-1 cursor-pointer">
-                    <div className="font-semibold">Razorpay (Online Payment)</div>
-                    <div className="text-sm text-muted-foreground">Pay securely with card, UPI, net banking</div>
-                  </Label>
-                </div>
-              </RadioGroup>
+              </div>
+
+              <div className="p-4 border rounded-lg bg-yellow-50 text-sm">
+                Cash on Delivery is temporarily disabled due to technical
+                reasons. We expect to enable it as soon as possible — thank you
+                for your patience.
+              </div>
             </Card>
           </div>
 
@@ -330,13 +409,17 @@ export default function Checkout() {
                   if (!product) return null;
                   return (
                     <div key={item.id} className="flex justify-between">
-                      <span>{product.title} x {item.quantity}</span>
-                      <span>₹{(product.price_inr * item.quantity).toFixed(2)}</span>
+                      <span>
+                        {product.title} x {item.quantity}
+                      </span>
+                      <span>
+                        ₹{(product.price_inr * item.quantity).toFixed(2)}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-              
+
               <div className="border-t pt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -368,13 +451,15 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <Button 
-                onClick={handleSubmit} 
-                disabled={loading} 
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
                 className="w-full mt-6"
                 size="lg"
               >
-                {loading ? 'Processing...' : paymentMethod === 'cod' ? 'Place Order (COD)' : 'Pay with Razorpay'}
+                {loading
+                  ? "Processing..."
+                  : `Pay ₹${totals.total.toFixed(2)} with Razorpay`}
               </Button>
             </Card>
           </div>
