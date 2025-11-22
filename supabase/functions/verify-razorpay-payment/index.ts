@@ -14,7 +14,6 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -27,9 +26,6 @@ serve(async (req) => {
     const secret = Deno.env.get("RAZORPAY_KEY_SECRET");
     if (!secret) throw new Error("Secret missing");
 
-    // ----------------------------
-    // ✅ Correct HMAC SHA256 verification
-    // ----------------------------
     const text = `${razorpay_order_id}|${razorpay_payment_id}`;
 
     const key = await crypto.subtle.importKey(
@@ -57,9 +53,6 @@ serve(async (req) => {
       throw new Error("Invalid payment signature");
     }
 
-    // ----------------------------
-    // Supabase update
-    // ----------------------------
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -81,6 +74,7 @@ serve(async (req) => {
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error("FUNCTION ERROR:", err);
     return new Response(

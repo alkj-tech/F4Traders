@@ -270,6 +270,7 @@ export default function Checkout() {
                 },
               }
             );
+            console.log("razorpay verification result:", verifyError);
 
             if (verifyError) throw verifyError;
 
