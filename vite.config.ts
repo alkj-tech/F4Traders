@@ -19,19 +19,19 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: 'F4Traders - Premium Sneakers',
-        short_name: '7Kicks',
+        short_name: 'F4Traders',
         description: 'Shop premium branded shoes online at F4Traders',
         theme_color: '#000000',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
-            src: '/placeholder.svg',
+            src: 'placeholder.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: '/placeholder.svg',
+            src: 'placeholder.svg',
             sizes: '512x512',
             type: 'image/svg+xml'
           }
