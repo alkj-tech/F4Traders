@@ -34,7 +34,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+    <BrowserRouter basename="/F4Traders">
       <AuthProvider>
         <CartProvider>
           <TooltipProvider>
