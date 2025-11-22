@@ -1,14 +1,18 @@
-name: Auto Build
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,16 +28,19 @@ jobs:
       - name: Build the app
         run: npm run build
 
-      - name: Upload production artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: dist
-          path: dist
+          path: dist   # or build (depends on your framework)
 
-      # (Optional) Warn if any assets/chunks exceed size limits
-      - name: Check large build chunks
-        run: |
-          npx tar -czf dist.tar.gz dist
-          gzip -l dist.tar.gz
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-# Optionally: add caching for node_modules to speed up builds, adjust node version, or add deployment steps
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
