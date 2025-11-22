@@ -107,9 +107,8 @@ export default function MyAccount() {
       // Try update first; if no row exists, upsert will create
       const payload = { id: user.id, phone: phoneInput };
 
-      const { error } = await supabase
-        .from("profiles")
-        .upsert(payload, { returning: "representation" });
+      // upsert in current types expects an array of rows and doesn't accept 'returning'
+      const { error } = await supabase.from("profiles").upsert([payload]);
       if (error) throw error;
 
       // refresh local profile

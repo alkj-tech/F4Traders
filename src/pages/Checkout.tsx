@@ -187,7 +187,6 @@ export default function Checkout() {
     try {
       // Ensure publishable key is available at runtime
       const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-      console.log("Using Razorpay Key ID:", keyId);
       if (!keyId) {
         // clearer message and checks for the correct env var name
         throw new Error(
@@ -217,25 +216,10 @@ export default function Checkout() {
           }
         );
 
-        // supabase.functions.invoke may return different shapes depending on client version:
-        // - older SDK: { data, error }
-        // - newer SDK: returns Response-like or throws FunctionsHttpError
-        // handle both:
-        if ((invokeResult as any).data) {
-          // shape: { data, error }
-          const { data, error } = invokeResult as any;
-          if (error) throw error;
-          razorpayOrder = data;
-        } else if ((invokeResult as any).status && (invokeResult as any).json) {
-          // if it is a Response object
-          const resp = invokeResult as Response;
-          const json = await resp.json();
-          if (!resp.ok) throw new Error(json?.error || JSON.stringify(json));
-          razorpayOrder = json;
-        } else {
-          // fallback: assume the invoke result is the order object
-          razorpayOrder = invokeResult;
-        }
+        // supabase.functions.invoke returns FunctionsResponse with data and error
+        const { data, error } = invokeResult as any;
+        if (error) throw error;
+        razorpayOrder = data;
       } catch (fnError: any) {
         console.error("Edge function (create-razorpay-order) failed:", fnError);
         // try to surface message returned by the function (if any)
