@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+   base: '/F4Traders/',
   server: {
     host: "::",
     port: 8080,
@@ -17,9 +18,9 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: '7Kicks - Premium Sneakers',
+        name: 'F4Traders - Premium Sneakers',
         short_name: '7Kicks',
-        description: 'Shop premium branded shoes online at 7Kicks',
+        description: 'Shop premium branded shoes online at F4Traders',
         theme_color: '#000000',
         background_color: '#ffffff',
         display: 'standalone',
