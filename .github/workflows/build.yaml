@@ -1,0 +1,39 @@
+name: Auto Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Upload production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      # (Optional) Warn if any assets/chunks exceed size limits
+      - name: Check large build chunks
+        run: |
+          npx tar -czf dist.tar.gz dist
+          gzip -l dist.tar.gz
+
+# Optionally: add caching for node_modules to speed up builds, adjust node version, or add deployment steps
