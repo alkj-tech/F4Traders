@@ -227,11 +227,17 @@ export default function Checkout() {
         throw new Error(`Payment server error: ${message}`);
       }
 
-      // Basic validation
       if (!razorpayOrder || !razorpayOrder.id) {
-        console.error("Invalid razorpay order response:", razorpayOrder);
         throw new Error("Failed to create Razorpay order from server");
       }
+
+      // SAVE RAZORPAY ORDER ID IN SUPABASE
+      await supabase
+        .from("orders")
+        .update({
+          razorpay_order_id: razorpayOrder.id,
+        })
+        .eq("id", order.id);
 
       const options = {
         key: keyId,
