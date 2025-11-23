@@ -230,7 +230,7 @@ export function Header() {
                 About Us
               </Link>
               <a
-                href="https://instagram.com/F4Traders"
+                href="https://www.instagram.com/f4tradersofficial/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary whitespace-nowrap"

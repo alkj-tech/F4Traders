@@ -65,15 +65,15 @@ export function Footer() {
             <ul className="space-y-4 text-sm text-gray-700">
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-gray-600" />
-                +91 1234567890
+                +919043713490
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-gray-600" />
                 <a
-                  href="mailto:contact@f4traders.com"
+                  href="mailto:f4tradersofficial@gmail.com"
                   className="hover:text-black"
                 >
-                  contact@f4traders.com
+                  f4tradersofficial@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-3">
@@ -114,7 +114,7 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-4">Social</h3>
             <a
-              href="#"
+              href="https://www.instagram.com/f4tradersofficial/"
               className="flex items-center gap-2 text-sm text-gray-700 hover:text-black"
             >
               <img
@@ -123,6 +123,18 @@ export function Footer() {
                 alt="Instagram"
               />
               Instagram
+            </a>
+            <br />
+            <a
+              href="https://www.instagram.com/f4tradersofficial/"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-black"
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/b/b9/2023_Facebook_icon.svg"
+                className="h-5 w-5"
+                alt="Facebook"
+              />
+              Facebook
             </a>
           </div>
         </div>

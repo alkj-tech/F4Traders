@@ -51,7 +51,7 @@ export function MobileMenu() {
 
             <div className="flex-1 flex items-center justify-center">
               {/* Replace src with your dark logo path */}
-              <img src={logo} alt="Logo" className="h-6 object-contain" />
+              <img src={logo} alt="Logo" className="h-9 object-contain" />
             </div>
 
             {/* <button
@@ -135,7 +135,7 @@ export function MobileMenu() {
                 About Us
               </Link>
               <a
-                href="https://instagram.com/F4traders"
+                href="https://www.instagram.com/f4tradersofficial/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="py-3 text-gray-700"
@@ -208,7 +208,7 @@ export function MobileMenu() {
           <div className="sticky bottom-0 left-0 right-0 bg-white border-t">
             <div className="flex items-center justify-around py-3">
               <a
-                href="tel:1234567890"
+                href="tel:+919043713490"
                 className="flex flex-col items-center text-xs text-gray-700"
               >
                 <div className="rounded-full p-2 bg-muted/20">
@@ -218,7 +218,7 @@ export function MobileMenu() {
               </a>
 
               <a
-                href="mailto:info@F4traders.in"
+                href="mailto:f4tradersofficial@gmail.com"
                 className="flex flex-col items-center text-xs text-gray-700"
               >
                 <div className="rounded-full p-2 bg-muted/20">
