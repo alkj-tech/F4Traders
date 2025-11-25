@@ -1,147 +1,180 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  sendOtp: (phone: string) => Promise<void>;
+  verifyOtp: (phone: string, otp: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// CONFIG: 24 Hours in Milliseconds
+const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const navigate = useNavigate();
 
+  // --- 1. INITIAL SESSION CHECK ---
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => {
-            checkUserRole(session.user.id);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-        }
-      }
-    );
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        checkUserRole(session.user.id);
-      }
       setLoading(false);
+      if (session) checkIdleTimeout(); // Check immediately on load
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) updateLastActivity(); // Reset timer on auth change
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkUserRole = async (userId: string) => {
+  // --- 2. ACTIVITY TRACKER (IDLE TIMEOUT) ---
+
+  const updateLastActivity = () => {
+    // Store the timestamp of the last click/keypress
+    localStorage.setItem("app_last_active", Date.now().toString());
+  };
+
+  const checkIdleTimeout = useCallback(async () => {
+    const lastActive = localStorage.getItem("app_last_active");
+    if (!lastActive) return;
+
+    const now = Date.now();
+    const diff = now - parseInt(lastActive, 10);
+
+    // If idle for more than 24 hours
+    if (diff > IDLE_TIMEOUT_MS) {
+      console.log("Session expired due to inactivity");
+      toast.info("Session expired due to inactivity. Please login again.");
+      await signOut();
+    }
+  }, []);
+
+  useEffect(() => {
+    // If no user, don't listen for events
+    if (!user) return;
+
+    // A. Listen for user activity
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    const handleActivity = () => updateLastActivity();
+
+    events.forEach((event) => window.addEventListener(event, handleActivity));
+
+    // B. Check for expiry every 1 minute
+    const interval = setInterval(checkIdleTimeout, 60 * 1000);
+
+    return () => {
+      events.forEach((event) =>
+        window.removeEventListener(event, handleActivity)
+      );
+      clearInterval(interval);
+    };
+  }, [user, checkIdleTimeout]);
+
+  // --- 3. AUTH FUNCTIONS ---
+
+  const sendOtp = async (phone: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
+      const fullPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      const { data, error } = await supabase.functions.invoke("auth-otp", {
+        body: { action: "send", phone: fullPhone },
+      });
 
-      if (error) throw error;
-
-      const roles = data?.map(r => r.role) || [];
-      setIsAdmin(roles.includes('admin') || roles.includes('superadmin'));
-      setIsSuperAdmin(roles.includes('superadmin'));
-    } catch (error) {
-      console.error('Error checking user role:', error);
+      if (error || (data && data.error)) {
+        throw new Error(data?.error || error?.message || "Failed to send OTP");
+      }
+      toast.success("OTP sent successfully");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+      throw err;
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const verifyOtp = async (phone: string, otp: string, name?: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const fullPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+
+      const { data, error } = await supabase.functions.invoke("auth-otp", {
+        body: { action: "verify", phone: fullPhone, otp },
       });
 
-      if (error) throw error;
-      toast.success('Signed in successfully!');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to sign in');
-      throw error;
-    }
-  };
+      if (error || (data && data.error))
+        throw new Error(data?.error || "Invalid OTP");
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
+      if (data?.session) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (sessionError) throw sessionError;
+      }
 
-      if (error) throw error;
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to sign up');
-      throw error;
+      // Update Profile if Name provided
+      if (name) {
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+        if (currentUser) {
+          await supabase.from("profiles").upsert({
+            id: currentUser.id,
+            phone: fullPhone,
+            full_name: name,
+          });
+        }
+      }
+
+      // Set initial activity timestamp
+      updateLastActivity();
+
+      toast.success("Welcome!");
+      navigate("/");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+      throw err;
     }
   };
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast.success('Signed out successfully');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to sign out');
-    }
+    await supabase.auth.signOut();
+    localStorage.removeItem("app_last_active"); // Clean up
+    navigate("/auth");
   };
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        session,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-        isAdmin,
-        isSuperAdmin,
-      }}
+      value={{ user, session, loading, sendOtp, verifyOtp, signOut }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
   return context;
-}
+};
