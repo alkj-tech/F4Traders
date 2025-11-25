@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,61 +7,68 @@ import { X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+// Use the logo if available, or remove img tag if not needed
+const LOGO_URL = "/mnt/data/e15e22bb-60b8-4747-8e7b-443b69ec1cce.png";
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { sendOtp, verifyOtp } = useAuth();
+export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+  const { sendOtp, verifyOtp, signOut } = useAuth();
 
-  // State
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"signup" | "login">("signup");
   const [step, setStep] = useState<"phone" | "otp">("phone");
 
-  // Form Data
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [phoneError, setPhoneError] = useState(""); // Validation Error State
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
 
-  // Reset state when modal closes
-  const handleClose = () => {
-    setStep("phone");
-    setOtp("");
-    setPhoneError("");
-    onClose();
-  };
+  // Reset when opening
+  useEffect(() => {
+    if (!isOpen) {
+      setStep("phone");
+      setLoading(false);
+      setOtp("");
+      setPhoneError("");
+    }
+  }, [isOpen]);
 
-  // --- 1. STRICT PHONE INPUT HANDLER ---
+  // --- 1. STRICT REAL-TIME VALIDATION ---
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers
     const value = e.target.value.replace(/\D/g, "");
 
-    // Limit to 10 digits
-    if (value.length <= 10) {
-      setPhone(value);
-      if (phoneError) setPhoneError(""); // Clear error while typing
+    // Prevent typing > 10
+    if (value.length > 10) return;
+
+    setPhone(value);
+
+    if (value.length > 0) {
+      if (!/^[6-9]/.test(value)) {
+        setPhoneError("Number must start with 6, 7, 8, or 9");
+      } else if (value.length === 10) {
+        setPhoneError("");
+      } else {
+        setPhoneError("");
+      }
+    } else {
+      setPhoneError("");
     }
   };
 
-  // --- 2. VALIDATION LOGIC ---
-  const validatePhone = (num: string) => {
-    const indianPhoneRegex = /^[6-9]\d{9}$/; // Starts with 6-9, exactly 10 digits
-    if (!num) return "Phone number is required";
-    if (num.length !== 10) return "Phone number must be 10 digits";
-    if (!indianPhoneRegex.test(num)) return "Invalid Indian mobile number";
-    return "";
-  };
+  // --- 2. SEND OTP (BLOCKED IF INVALID) ---
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
-  // --- 3. SEND OTP ---
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const error = validatePhone(phone);
-    if (error) {
-      setPhoneError(error);
+    // Final check
+    const indianPhoneRegex = /^[6-9]\d{9}$/;
+    if (!indianPhoneRegex.test(phone)) {
+      setPhoneError("Enter a valid 10-digit Indian number");
+      toast.error("Invalid Mobile Number");
       return;
     }
 
@@ -69,17 +76,16 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       await sendOtp(phone);
       setStep("otp");
-    } catch (e) {
-      // Context handles toast
+    } catch (err) {
+      // Context handles error
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 4. VERIFY OTP ---
-  const handleVerify = async (e: React.FormEvent) => {
+  // --- 3. VERIFY OTP ---
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (otp.length !== 6) {
       toast.error("Please enter a 6-digit OTP");
       return;
@@ -88,136 +94,166 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoading(true);
     try {
       await verifyOtp(phone, otp, mode === "signup" ? name : undefined);
-      handleClose(); // Close on success
-    } catch (e) {
-      // Context handles toast
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      // Context handles error
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setMode(mode === "login" ? "signup" : "login");
-    setStep("phone");
-    setOtp("");
-    setPhoneError("");
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-card">
-        {/* Header */}
-        <div className="relative p-6 pb-2 text-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4"
-            onClick={handleClose}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[440px] p-0 gap-0 overflow-hidden bg-card rounded-lg">
+        <div className="relative">
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
+            aria-label="Close"
           >
-            <X className="h-4 w-4" />
-          </Button>
-          <h2 className="text-xl font-bold">
-            {mode === "login" ? "Welcome Back" : "Create Account"}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {step === "phone"
-              ? mode === "login"
-                ? "Login to continue"
-                : "Register to get started"
-              : `Verify +91 ${phone}`}
-          </p>
-        </div>
+            <X className="h-5 w-5" />
+          </button>
 
-        <div className="p-6 pt-2">
-          {step === "phone" ? (
-            <form onSubmit={handleSend} className="space-y-4">
-              {/* Name Input - Only for Signup */}
-              {mode === "signup" && (
+          <div className="p-8">
+            {/* Logo Section */}
+            <div className="flex items-center justify-center mb-6">
+              <img
+                src={LOGO_URL}
+                alt="logo"
+                className="h-12 w-12 rounded-md object-cover"
+                onError={(e) => (e.currentTarget.style.display = "none")} // Hide if broken
+              />
+            </div>
+
+            <h2 className="text-2xl font-semibold text-center mb-4">
+              {mode === "signup" ? "Sign Up (OTP)" : "Sign In (OTP)"}
+            </h2>
+
+            {step === "phone" ? (
+              <form onSubmit={handleSendOtp} className="space-y-5">
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label>Your Name *</Label>
+                    <Input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="h-12"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label>Full Name</Label>
+                  <Label>Mobile Number *</Label>
+                  <div className="flex gap-2 relative">
+                    <div className="flex items-center justify-center border rounded-md px-3 bg-muted text-muted-foreground font-medium h-12">
+                      +91
+                    </div>
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      required
+                      className={`h-12 ${
+                        phoneError
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : ""
+                      }`}
+                      placeholder="9876543210"
+                    />
+                  </div>
+                  {phoneError && (
+                    <p className="text-red-500 text-xs font-medium mt-1">
+                      {phoneError}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading || phone.length !== 10 || !!phoneError}
+                  className="w-full h-12 text-base font-semibold"
+                >
+                  {loading ? "Sending OTP..." : "Send OTP"}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Enter OTP *</Label>
                   <Input
                     type="text"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     required
-                    className="h-11"
+                    maxLength={6}
+                    className="h-12 text-center text-lg tracking-widest"
+                    placeholder="6-digit OTP"
                   />
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label>Mobile Number</Label>
-                {/* Updated UI: +91 Prefix Box */}
                 <div className="flex gap-2">
-                  <div className="flex items-center justify-center border rounded-md px-3 bg-muted text-muted-foreground font-medium h-11">
-                    +91
-                  </div>
-                  <Input
-                    type="tel"
-                    placeholder="9876543210"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    className={`h-11 ${phoneError ? "border-red-500" : ""}`}
-                  />
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 h-12 text-base font-semibold"
+                  >
+                    {loading ? "Verifying..." : "Verify OTP"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={() => setStep("phone")}
+                    className="flex-1 h-12 text-base font-semibold"
+                    variant="outline"
+                  >
+                    Edit Phone
+                  </Button>
                 </div>
-                {phoneError && (
-                  <p className="text-red-500 text-xs font-medium">
-                    {phoneError}
-                  </p>
-                )}
-              </div>
+              </form>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full h-11"
-                disabled={loading || phone.length < 10}
-              >
-                {loading ? "Sending..." : "Get OTP"}
-              </Button>
-
-              {/* Toggle Mode */}
-              <div className="text-center mt-2">
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="text-sm text-primary hover:underline"
-                >
-                  {mode === "login"
-                    ? "Don't have an account? Sign Up"
-                    : "Already have an account? Sign In"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleVerify} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Enter OTP</Label>
-                <Input
-                  type="text"
-                  placeholder="XXXXXX"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  maxLength={6}
-                  required
-                  className="h-11 text-center text-lg tracking-widest"
-                />
-              </div>
-
-              <Button type="submit" className="w-full h-11" disabled={loading}>
-                {loading ? "Verifying..." : "Verify & Login"}
-              </Button>
-
-              <Button
+            {/* Toggle Mode */}
+            <div className="text-center mt-4">
+              <button
                 type="button"
-                variant="link"
-                className="w-full"
-                onClick={() => setStep("phone")}
+                onClick={() => {
+                  setMode((m) => (m === "signup" ? "login" : "signup"));
+                  setStep("phone");
+                  setPhoneError("");
+                  setPhone("");
+                }}
+                className="text-sm text-primary hover:underline"
               >
-                Change Phone Number
+                {mode === "signup"
+                  ? "Already have an account? Sign In"
+                  : "Don't have an account? Sign Up"}
+              </button>
+            </div>
+
+            {/* Debug / Logout Footer (Optional, good for dev) */}
+            <div className="text-center mt-6 pt-4 border-t">
+              <p className="text-xs text-muted-foreground mb-2">
+                Session TTL: 24h (Idle Timeout)
+              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={async () => {
+                  await signOut();
+                  onSuccess?.();
+                  onClose();
+                }}
+              >
+                Logout
               </Button>
-            </form>
-          )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

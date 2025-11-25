@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // CONFIG: 24 Hours in Milliseconds
-const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000; 
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -39,9 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) checkIdleTimeout(); // Check immediately on load
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session) updateLastActivity(); // Reset timer on auth change
@@ -51,9 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // --- 2. ACTIVITY TRACKER (IDLE TIMEOUT) ---
-
   const updateLastActivity = () => {
-    // Store the timestamp of the last click/keypress
     localStorage.setItem("app_last_active", Date.now().toString());
   };
 
@@ -73,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // If no user, don't listen for events
     if (!user) return;
 
     // A. Listen for user activity
@@ -86,18 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(checkIdleTimeout, 60 * 1000);
 
     return () => {
-      events.forEach((event) =>
-        window.removeEventListener(event, handleActivity)
-      );
+      events.forEach((event) => window.removeEventListener(event, handleActivity));
       clearInterval(interval);
     };
   }, [user, checkIdleTimeout]);
+
 
   // --- 3. AUTH FUNCTIONS ---
 
   const sendOtp = async (phone: string) => {
     try {
+      // Ensure +91 is added if missing (though UI enforces it mostly)
       const fullPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+      
       const { data, error } = await supabase.functions.invoke("auth-otp", {
         body: { action: "send", phone: fullPhone },
       });
@@ -108,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("OTP sent successfully");
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err.message); // Will show Rate Limit error here
       throw err;
     }
   };
@@ -132,23 +122,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionError) throw sessionError;
       }
 
-      // Update Profile if Name provided
+      // Update Profile if Name provided (Signup Flow)
       if (name) {
-        const {
-          data: { user: currentUser },
-        } = await supabase.auth.getUser();
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
           await supabase.from("profiles").upsert({
-            id: currentUser.id,
-            phone: fullPhone,
-            full_name: name,
-          });
+              id: currentUser.id,
+              phone: fullPhone,
+              full_name: name,
+            });
         }
       }
 
-      // Set initial activity timestamp
-      updateLastActivity();
-
+      updateLastActivity(); // Reset idle timer
       toast.success("Welcome!");
       navigate("/");
     } catch (err: any) {
@@ -160,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("app_last_active"); // Clean up
+    localStorage.removeItem("app_last_active");
     navigate("/auth");
   };
 

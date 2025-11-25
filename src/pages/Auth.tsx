@@ -1,71 +1,71 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner"; // Assuming you have sonner or use your toast lib
+import { Card } from "@/components/ui/card";
+import { Navigate, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
+import { toast } from "sonner";
 
-export default function AuthPage() {
-  const { user, sendOtp, verifyOtp } = useAuth();
+export default function Auth() {
   const navigate = useNavigate();
+  const { user, sendOtp, verifyOtp } = useAuth();
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  
-  // Form State
+  const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [phoneError, setPhoneError] = useState(""); // Track validation error
-  
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"enter-phone" | "enter-otp">("enter-phone");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) navigate("/");
-  }, [user, navigate]);
+  // Validation State
+  const [phoneError, setPhoneError] = useState("");
 
-  // --- VALIDATION LOGIC ---
-  const validatePhone = (num: string) => {
-    // Regex: Starts with 6-9, followed by 9 digits (Total 10)
-    const indianPhoneRegex = /^[6-9]\d{9}$/;
-    
-    if (!num) return "Phone number is required";
-    if (num.length !== 10) return "Phone number must be 10 digits";
-    if (!indianPhoneRegex.test(num)) return "Invalid Indian mobile number";
-    
-    return ""; // No error
-  };
+  if (user) return <Navigate to="/" replace />;
 
+  // --- 1. REAL-TIME UI VALIDATION ---
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // 1. Allow only numbers
+    // Remove non-numbers immediately
     const value = e.target.value.replace(/\D/g, "");
-    
-    // 2. Limit to 10 digits
-    if (value.length <= 10) {
-      setPhone(value);
-      // Clear error as they type (optional)
-      if (phoneError) setPhoneError("");
+
+    // Prevent typing more than 10 digits
+    if (value.length > 10) return;
+
+    setPhone(value);
+
+    // Real-time validation feedback
+    if (value.length > 0) {
+      if (!/^[6-9]/.test(value)) {
+        setPhoneError("Mobile number must start with 6, 7, 8, or 9");
+      } else if (value.length < 10) {
+        setPhoneError(""); // Don't show error while typing incomplete number
+      } else {
+        setPhoneError(""); // Valid!
+      }
+    } else {
+      setPhoneError("");
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // 1. Run Validation before sending
-    const error = validatePhone(phone);
-    if (error) {
-      setPhoneError(error);
-      return; // STOP HERE
+  // --- 2. SEND OTP (BLOCKED IF INVALID) ---
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    // Final Check before calling API
+    const indianPhoneRegex = /^[6-9]\d{9}$/;
+    if (!indianPhoneRegex.test(phone)) {
+      setPhoneError("Please enter a valid 10-digit Indian number");
+      toast.error("Invalid Mobile Number");
+      return; // ⛔️ STOP HERE. DO NOT CALL SERVER.
     }
 
     setLoading(true);
     try {
       await sendOtp(phone);
-      setStep("otp");
-    } catch (error) {
-      // Context handles alert
+      setStep("enter-otp");
+    } catch (err) {
+      // Context handles error toast
     } finally {
       setLoading(false);
     }
@@ -74,127 +74,158 @@ export default function AuthPage() {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 6) {
-        toast.error("Please enter a 6-digit OTP");
-        return;
+      toast.error("Please enter a 6-digit OTP");
+      return;
     }
-
     setLoading(true);
     try {
-      await verifyOtp(phone, otp, mode === "signup" ? name : undefined);
-    } catch (error) {
-      // Context handles alert
+      await verifyOtp(phone, otp, isSignUp ? name : undefined);
+    } catch (err) {
+      // Context handles error toast
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold">
-            {mode === "login" ? "Welcome Back" : "Create Account"}
-          </CardTitle>
-          <CardDescription>
-            {step === "phone" 
-              ? `Enter your details to ${mode === "login" ? "login" : "register"}` 
-              : `Enter the OTP sent to +91 ${phone}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {step === "phone" ? (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              
-              {mode === "signup" && (
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+      <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
+        <Card className="relative w-full max-w-md p-8 rounded-xl shadow-xl border bg-card">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="absolute right-4 top-4 p-1 rounded-md hover:bg-muted transition"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <h2 className="text-2xl font-semibold text-center mb-8">
+            {isSignUp ? "Sign Up" : "Sign In"}
+          </h2>
+
+          {step === "enter-phone" && (
+            <form onSubmit={handleSendOtp} className="space-y-5">
+              {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label>Your Name *</Label>
                   <Input
-                    id="name"
                     type="text"
-                    placeholder="Enter your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="h-11"
+                    className="h-12"
+                    placeholder="Enter your name"
                   />
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Mobile Number</Label>
-                <div className="flex gap-2">
-                   {/* Prefix Box */}
-                   <div className="flex items-center justify-center border rounded-md px-3 bg-gray-100 text-gray-500 font-medium h-11">
-                     +91
-                   </div>
-                   <Input
-                    id="phone"
+                <Label>Mobile Number *</Label>
+                <div className="flex gap-2 relative">
+                  <div className="flex items-center justify-center border rounded-md px-3 bg-muted text-muted-foreground font-medium h-12">
+                    +91
+                  </div>
+                  <Input
                     type="tel"
-                    placeholder="9876543210"
                     value={phone}
-                    onChange={handlePhoneChange} // Uses strict handler
-                    className={`h-11 ${phoneError ? "border-red-500" : ""}`}
+                    onChange={handlePhoneChange}
+                    required
+                    className={`h-12 ${
+                      phoneError
+                        ? "border-red-500 focus-visible:ring-red-500"
+                        : ""
+                    }`}
+                    placeholder="9876543210"
                   />
                 </div>
-                {/* Validation Error Text */}
+                {/* UI Error Message */}
                 {phoneError && (
-                    <p className="text-red-500 text-xs font-medium">{phoneError}</p>
+                  <p className="text-red-500 text-xs font-medium animate-pulse mt-1">
+                    {phoneError}
+                  </p>
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-11" 
-                disabled={loading || phone.length < 10} // Disable if invalid
+              <Button
+                type="submit"
+                // Disable button if phone is invalid (Visual Block)
+                disabled={loading || phone.length !== 10 || !!phoneError}
+                className="w-full h-12 text-base font-semibold"
               >
-                {loading ? "Sending..." : "Get OTP"}
-              </Button>
-
-              <div className="text-center mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                      setMode(mode === "login" ? "signup" : "login");
-                      setPhoneError(""); 
-                  }}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  {mode === "login" 
-                    ? "Don't have an account? Sign Up" 
-                    : "Already have an account? Login"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="otp">One-Time Password</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="XXXXXX"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  maxLength={6}
-                  required
-                  className="h-11 text-center text-lg tracking-widest"
-                />
-              </div>
-              <Button type="submit" className="w-full h-11" disabled={loading}>
-                {loading ? "Verifying..." : "Verify & Login"}
-              </Button>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="w-full"
-                onClick={() => setStep("phone")}
-              >
-                Change Phone Number
+                {loading ? "Sending OTP..." : "SEND OTP"}
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
-    </div>
+
+          {step === "enter-otp" && (
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <div className="space-y-2">
+                <Label>Enter OTP</Label>
+                <Input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  required
+                  maxLength={6}
+                  className="h-12 text-center text-lg tracking-widest"
+                  placeholder="6-digit OTP"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 text-base font-semibold"
+              >
+                {loading ? "Verifying..." : "VERIFY OTP"}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => handleSendOtp()}
+                className="text-sm text-primary hover:underline block mx-auto mt-3"
+              >
+                Resend OTP
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep("enter-phone")}
+                className="text-xs text-muted-foreground hover:text-primary block mx-auto mt-2"
+              >
+                Change Phone Number
+              </button>
+            </form>
+          )}
+
+          <div className="text-center mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setStep("enter-phone");
+                setPhoneError("");
+                setPhone("");
+                setName("");
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? (
+                <>
+                  Already have an account?{" "}
+                  <span className="font-semibold">Sign In</span>
+                </>
+              ) : (
+                <>
+                  Don’t have an account?{" "}
+                  <span className="font-semibold">Sign Up</span>
+                </>
+              )}
+            </button>
+          </div>
+        </Card>
+      </div>
+    </>
   );
 }
