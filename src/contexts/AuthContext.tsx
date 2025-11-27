@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: string | null;
+  isAdmin: boolean; // <--- ADDED THIS BACK
   loading: boolean;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   signupWithEmail: (
@@ -38,15 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // --- DERIVED STATE: isAdmin ---
+  // We calculate this automatically whenever 'role' changes
+  const isAdmin = role === "admin" || role === "superadmin";
+
   // --- 1. FETCH ROLE (FIXED FOR YOUR DB SCHEMA) ---
   const fetchUserRole = async (userId: string) => {
     try {
-      // Your DB stores roles in 'user_roles', NOT 'profiles'
       const { data, error } = await supabase
-        .from("user_roles") // <--- Correct Table
+        .from("user_roles")
         .select("role")
-        .eq("user_id", userId) // <--- Correct Foreign Key
-        .maybeSingle(); // <--- Safer than single()
+        .eq("user_id", userId)
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching role:", error);
@@ -56,7 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         setRole(data.role);
       } else {
-        // Fallback if trigger hasn't run yet (rare)
         setRole("customer");
       }
     } catch (error) {
@@ -147,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string
   ) => {
     try {
-      // 1. Create Auth User
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -155,8 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (error) throw error;
 
-      // NOTE: We do NOT need to manually insert into 'profiles' or 'user_roles' here.
-      // Your SQL Trigger 'on_auth_user_created' handles this automatically!
+      // Trigger automatically handles profile/role creation
 
       toast.success("Account created successfully!");
       navigate("/");
@@ -211,9 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      // Dynamic redirect for Localhost vs GitHub Pages
       const redirectUrl = window.location.href.split("/auth")[0];
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: redirectUrl },
@@ -237,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         role,
+        isAdmin, // <--- EXPOSED HERE
         loading,
         loginWithEmail,
         signupWithEmail,
