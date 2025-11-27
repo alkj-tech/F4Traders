@@ -3,11 +3,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { X, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 
-// Use the logo if available, or remove img tag if not needed
 const LOGO_URL = "/mnt/data/e15e22bb-60b8-4747-8e7b-443b69ec1cce.png";
 
 interface AuthModalProps {
@@ -16,88 +16,58 @@ interface AuthModalProps {
   onSuccess?: () => void;
 }
 
+type AuthView = "login" | "signup" | "forgot_password";
+
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const { sendOtp, verifyOtp, signOut } = useAuth();
+  const { loginWithEmail, signupWithEmail, resetPassword, signOut } = useAuth();
 
-  const [mode, setMode] = useState<"signup" | "login">("signup");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-
+  const [view, setView] = useState<AuthView>("signup");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
 
-  // Reset when opening
   useEffect(() => {
     if (!isOpen) {
-      setStep("phone");
+      setEmail("");
+      setPassword("");
       setLoading(false);
-      setOtp("");
-      setPhoneError("");
+      setView("signup"); // Default to signup on re-open
     }
   }, [isOpen]);
 
-  // --- 1. STRICT REAL-TIME VALIDATION ---
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-
-    // Prevent typing > 10
-    if (value.length > 10) return;
-
-    setPhone(value);
-
-    if (value.length > 0) {
-      if (!/^[6-9]/.test(value)) {
-        setPhoneError("Number must start with 6, 7, 8, or 9");
-      } else if (value.length === 10) {
-        setPhoneError("");
-      } else {
-        setPhoneError("");
-      }
-    } else {
-      setPhoneError("");
-    }
-  };
-
-  // --- 2. SEND OTP (BLOCKED IF INVALID) ---
-  const handleSendOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-
-    // Final check
-    const indianPhoneRegex = /^[6-9]\d{9}$/;
-    if (!indianPhoneRegex.test(phone)) {
-      setPhoneError("Enter a valid 10-digit Indian number");
-      toast.error("Invalid Mobile Number");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await sendOtp(phone);
-      setStep("otp");
-    } catch (err) {
-      // Context handles error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- 3. VERIFY OTP ---
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) {
-      toast.error("Please enter a 6-digit OTP");
-      return;
-    }
-
     setLoading(true);
+
     try {
-      await verifyOtp(phone, otp, mode === "signup" ? name : undefined);
-      onSuccess?.();
-      onClose();
-    } catch (err) {
-      // Context handles error
+      if (view === "signup") {
+        await signupWithEmail(email, password, name);
+        onSuccess?.();
+        onClose();
+      } else if (view === "login") {
+        await loginWithEmail(email, password);
+        onSuccess?.();
+        onClose();
+      } else if (view === "forgot_password") {
+        await resetPassword(email);
+        // Do NOT close modal here; let them see the "Check Email" toast
+      }
+    } catch (err: any) {
+      console.error("Auth Modal Error:", err);
+      const errorMessage = err.message || "";
+
+      if (errorMessage.includes("Invalid login credentials")) {
+        toast.error(
+          "Incorrect password. If you signed up with Google, please use the Google button."
+        );
+      } else if (errorMessage.includes("User already registered")) {
+        toast.error(
+          "Account already exists. Please Sign In with Google or Email."
+        );
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -107,7 +77,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[440px] p-0 gap-0 overflow-hidden bg-card rounded-lg">
         <div className="relative">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none"
@@ -117,125 +86,135 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
           </button>
 
           <div className="p-8">
-            {/* Logo Section */}
             <div className="flex items-center justify-center mb-6">
               <img
                 src={LOGO_URL}
                 alt="logo"
                 className="h-12 w-12 rounded-md object-cover"
-                onError={(e) => (e.currentTarget.style.display = "none")} // Hide if broken
+                onError={(e) => (e.currentTarget.style.display = "none")}
               />
             </div>
 
-            <h2 className="text-2xl font-semibold text-center mb-4">
-              {mode === "signup" ? "Sign Up (OTP)" : "Sign In (OTP)"}
+            <h2 className="text-2xl font-semibold text-center mb-6">
+              {view === "signup" && "Create Account"}
+              {view === "login" && "Sign In"}
+              {view === "forgot_password" && "Reset Password"}
             </h2>
 
-            {step === "phone" ? (
-              <form onSubmit={handleSendOtp} className="space-y-5">
-                {mode === "signup" && (
-                  <div className="space-y-2">
-                    <Label>Your Name *</Label>
-                    <Input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="h-12"
-                      placeholder="Enter your name"
-                    />
+            {view !== "forgot_password" && (
+              <div className="mb-6">
+                <GoogleLoginButton />
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-300" />
                   </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>Mobile Number *</Label>
-                  <div className="flex gap-2 relative">
-                    <div className="flex items-center justify-center border rounded-md px-3 bg-muted text-muted-foreground font-medium h-12">
-                      +91
-                    </div>
-                    <Input
-                      type="tel"
-                      value={phone}
-                      onChange={handlePhoneChange}
-                      required
-                      className={`h-12 ${
-                        phoneError
-                          ? "border-red-500 focus-visible:ring-red-500"
-                          : ""
-                      }`}
-                      placeholder="9876543210"
-                    />
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or continue with email
+                    </span>
                   </div>
-                  {phoneError && (
-                    <p className="text-red-500 text-xs font-medium mt-1">
-                      {phoneError}
-                    </p>
-                  )}
                 </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading || phone.length !== 10 || !!phoneError}
-                  className="w-full h-12 text-base font-semibold"
-                >
-                  {loading ? "Sending OTP..." : "Send OTP"}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <div className="space-y-2">
-                  <Label>Enter OTP *</Label>
-                  <Input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    required
-                    maxLength={6}
-                    className="h-12 text-center text-lg tracking-widest"
-                    placeholder="6-digit OTP"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 h-12 text-base font-semibold"
-                  >
-                    {loading ? "Verifying..." : "Verify OTP"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    onClick={() => setStep("phone")}
-                    className="flex-1 h-12 text-base font-semibold"
-                    variant="outline"
-                  >
-                    Edit Phone
-                  </Button>
-                </div>
-              </form>
+              </div>
             )}
 
-            {/* Toggle Mode */}
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode((m) => (m === "signup" ? "login" : "signup"));
-                  setStep("phone");
-                  setPhoneError("");
-                  setPhone("");
-                }}
-                className="text-sm text-primary hover:underline"
-              >
-                {mode === "signup"
-                  ? "Already have an account? Sign In"
-                  : "Don't have an account? Sign Up"}
-              </button>
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {view === "signup" && (
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="h-12"
+                    placeholder="John Doe"
+                  />
+                </div>
+              )}
 
-            {/* Debug / Logout Footer (Optional, good for dev) */}
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12"
+                  placeholder="name@example.com"
+                />
+              </div>
+
+              {view !== "forgot_password" && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Password</Label>
+                    {view === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => setView("forgot_password")}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-12"
+                    placeholder="••••••••"
+                    minLength={6}
+                  />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 text-base font-semibold mt-2"
+              >
+                {loading
+                  ? "Please wait..."
+                  : view === "signup"
+                  ? "Sign Up"
+                  : view === "login"
+                  ? "Sign In"
+                  : "Send Reset Link"}
+              </Button>
+
+              {view === "forgot_password" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setView("login")}
+                  className="w-full mt-2"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
+                </Button>
+              )}
+            </form>
+
+            {view !== "forgot_password" && (
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView(view === "signup" ? "login" : "signup");
+                    setEmail("");
+                    setPassword("");
+                    setName("");
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {view === "signup"
+                    ? "Already have an account? Sign In"
+                    : "Don't have an account? Sign Up"}
+                </button>
+              </div>
+            )}
+
             <div className="text-center mt-6 pt-4 border-t">
               <p className="text-xs text-muted-foreground mb-2">
                 Session TTL: 24h (Idle Timeout)
