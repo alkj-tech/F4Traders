@@ -13,6 +13,7 @@ import { toast } from "sonner";
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  role: string | null;
   loading: boolean;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   signupWithEmail: (
@@ -33,15 +34,47 @@ const IDLE_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // --- 1. FETCH ROLE (FIXED FOR YOUR DB SCHEMA) ---
+  const fetchUserRole = async (userId: string) => {
+    try {
+      // Your DB stores roles in 'user_roles', NOT 'profiles'
+      const { data, error } = await supabase
+        .from("user_roles") // <--- Correct Table
+        .select("role")
+        .eq("user_id", userId) // <--- Correct Foreign Key
+        .maybeSingle(); // <--- Safer than single()
+
+      if (error) {
+        console.error("Error fetching role:", error);
+        return;
+      }
+
+      if (data) {
+        setRole(data.role);
+      } else {
+        // Fallback if trigger hasn't run yet (rare)
+        setRole("customer");
+      }
+    } catch (error) {
+      console.error("Role fetch error:", error);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
-      if (session) checkIdleTimeout();
+
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+        checkIdleTimeout();
+      } else {
+        setLoading(false);
+      }
     });
 
     const {
@@ -49,13 +82,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session) updateLastActivity();
 
-      // -----------------------------------------------------
-      // FIX: REMOVED THE NAVIGATION LOGIC HERE
-      // The email link already handles the redirect.
-      // Navigating here wipes the secure token from the URL.
-      // -----------------------------------------------------
+      if (session?.user) {
+        updateLastActivity();
+        fetchUserRole(session.user.id);
+      } else {
+        setRole(null);
+      }
+
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -112,17 +147,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string
   ) => {
     try {
+      // 1. Create Auth User
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: name } },
       });
       if (error) throw error;
-      if (data.user) {
-        await supabase
-          .from("profiles")
-          .upsert({ id: data.user.id, full_name: name });
-      }
+
+      // NOTE: We do NOT need to manually insert into 'profiles' or 'user_roles' here.
+      // Your SQL Trigger 'on_auth_user_created' handles this automatically!
+
       toast.success("Account created successfully!");
       navigate("/");
     } catch (error: any) {
@@ -132,16 +167,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      // 1. Get the base URL (e.g., http://localhost:8080)
       const origin = window.location.origin;
-
-      // 2. Check if we are running inside a subfolder (like /F4Traders)
-      // This prevents the link from breaking on GitHub Pages or sub-path deployments
       const pathPrefix = window.location.pathname.startsWith("/F4Traders")
         ? "/F4Traders"
         : "";
-
-      // 3. Construct the correct URL
       const redirectUrl = `${origin}${pathPrefix}/auth?view=update_password`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -158,8 +187,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (password: string) => {
     try {
-      // 1. Double check we have a session
-      // We assume the URL token has been processed by now.
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -170,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // 2. Perform Update
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
@@ -184,16 +210,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) toast.error(error.message);
+    try {
+      // Dynamic redirect for Localhost vs GitHub Pages
+      const redirectUrl = window.location.href.split("/auth")[0];
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUrl },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem("app_last_active");
+    setRole(null);
     navigate("/auth");
   };
 
@@ -202,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         session,
+        role,
         loading,
         loginWithEmail,
         signupWithEmail,
