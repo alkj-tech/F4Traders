@@ -8,10 +8,16 @@ export const GoogleLoginButton = () => {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+
+      // FIX: Dynamically determine the correct redirect URL
+      // This works for both Localhost AND GitHub Pages (subfolders)
+      // window.location.href ensures we stay in the current folder (e.g. /F4Traders/)
+      const redirectUrl = window.location.href.split("/auth")[0];
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
