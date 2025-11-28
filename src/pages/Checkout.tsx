@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -17,24 +15,17 @@ declare global {
   }
 }
 
-interface AddressRow {
-  id: number;
-  user_id: string;
-  full_name: string;
-  phone: string;
-  street: string;
-  city: string;
-  state: string;
-  pincode: string;
-  is_default?: boolean;
-  created_at?: string;
-}
-
 export default function Checkout() {
   const { items, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // Settings State
+  const [gstRate, setGstRate] = useState(0);
+  const [cgstRate, setCgstRate] = useState(0);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   const [address, setAddress] = useState({
     fullName: "",
     phone: "",
@@ -46,33 +37,48 @@ export default function Checkout() {
 
   const [addressConfirmed, setAddressConfirmed] = useState(false);
 
+  // 1. Fetch Global Settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase.from("settings").select("*");
+        if (data) {
+          const gst = data.find((s) => s.key === "gst_percentage");
+          const cgst = data.find((s) => s.key === "cgst_percentage");
+          if (gst) setGstRate(Number(gst.value));
+          if (cgst) setCgstRate(Number(cgst.value));
+        }
+        setSettingsLoaded(true);
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // 2. Fetch User Address
   useEffect(() => {
     const fetchAddress = async () => {
       try {
         if (!user) return;
-
         let { data, error } = await supabase
           .from("user_addresses")
           .select(
-            "id,user_id,full_name,phone,street,city,state,pincode,is_default,created_at"
+            "full_name,phone,street,city,state,pincode,is_default,created_at"
           )
           .eq("user_id", user.id)
           .eq("is_default", true)
           .single();
 
-        // If no default found (PostgREST returns PGRST116), fetch latest address
         if (error && (error as any).code === "PGRST116") {
-          const { data: fallback, error: fallbackError } = await supabase
+          const { data: fallback } = await supabase
             .from("user_addresses")
-            .select(
-              "id,user_id,full_name,phone,street,city,state,pincode,created_at"
-            )
+            .select("full_name,phone,street,city,state,pincode,created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(1)
             .single();
-
-          if (fallback && !fallbackError) data = fallback as any;
+          if (fallback) data = fallback as any;
         }
 
         if (data) {
@@ -89,21 +95,22 @@ export default function Checkout() {
         console.error("Failed to fetch address", err);
       }
     };
-
     fetchAddress();
   }, [user]);
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (items.length === 0) return <Navigate to="/cart" replace />;
 
-  if (items.length === 0) {
-    return <Navigate to="/cart" replace />;
-  }
+  const isTamilNaduPincode = (pincode: string) => {
+    if (!pincode) return false;
+    const prefix = pincode.substring(0, 2);
+    const pVal = parseInt(prefix);
+    return pVal >= 60 && pVal <= 66;
+  };
 
   const calculateTotals = () => {
     let subtotal = 0;
-    let discountTotal = 0;
+    let totalTaxableValue = 0;
     let gstTotal = 0;
     let cgstTotal = 0;
 
@@ -111,67 +118,80 @@ export default function Checkout() {
       const product = item.product;
       if (!product) return;
 
-      const itemSubtotal = product.price_inr * item.quantity;
-      const itemDiscount = itemSubtotal * (product.discount_percent / 100);
-      const discountedPrice = itemSubtotal - itemDiscount;
+      const itemTotalPrice = product.price_inr * item.quantity;
+      const discountAmount = itemTotalPrice * (product.discount_percent / 100);
+      const itemFinalPrice = itemTotalPrice - discountAmount;
 
-      subtotal += itemSubtotal;
-      discountTotal += itemDiscount;
-      gstTotal += discountedPrice * (product.gst_percent / 100);
-      cgstTotal += discountedPrice * (product.cgst_percent / 100);
+      const totalTaxRate = gstRate + cgstRate;
+      const itemBasePrice = itemFinalPrice / (1 + totalTaxRate / 100);
+      const itemTaxAmount = itemFinalPrice - itemBasePrice;
+
+      const gstShare =
+        totalTaxRate > 0 ? (gstRate / totalTaxRate) * itemTaxAmount : 0;
+      const cgstShare =
+        totalTaxRate > 0 ? (cgstRate / totalTaxRate) * itemTaxAmount : 0;
+
+      subtotal += itemFinalPrice;
+      totalTaxableValue += itemBasePrice;
+      gstTotal += gstShare;
+      cgstTotal += cgstShare;
     });
 
-    const total = subtotal - discountTotal + gstTotal + cgstTotal;
+    let deliveryFee = 50;
+    if (address.pincode && isTamilNaduPincode(address.pincode)) {
+      deliveryFee = 0;
+    }
 
-    return { subtotal, discountTotal, gstTotal, cgstTotal, total };
+    const total = subtotal + deliveryFee;
+
+    return {
+      subtotal,
+      taxableValue: totalTaxableValue,
+      gstTotal,
+      cgstTotal,
+      deliveryFee,
+      total,
+    };
   };
 
   const totals = calculateTotals();
 
-  const createOrder = async (shippingAddress: any) => {
-    const orderItems = items.map((item) => ({
-      product_id: item.product.id,
-      product_name: item.product.title,
-      quantity: item.quantity,
-      price: item.product.price_inr,
-      discount_percent: item.product.discount_percent,
-      gst_percent: item.product.gst_percent,
-      cgst_percent: item.product.cgst_percent,
-      size: item.size,
-      color: item.color,
-      total_price:
-        item.product.price_inr *
-        item.quantity *
-        (1 - item.product.discount_percent / 100),
-    }));
+  // Helper to structure data
+  const prepareOrderData = () => {
+    const orderItems = items.map((item) => {
+      const itemTotal = item.product.price_inr * item.quantity;
+      const discount = itemTotal * (item.product.discount_percent / 100);
+      const finalPrice = itemTotal - discount;
+
+      return {
+        product_id: item.product.id,
+        product_name: item.product.title,
+        quantity: item.quantity,
+        price: item.product.price_inr,
+        discount_percent: item.product.discount_percent,
+        gst_percent: gstRate,
+        cgst_percent: cgstRate,
+        size: item.size,
+        color: item.color,
+        total_price: finalPrice,
+      };
+    });
 
     const orderNo = `ORD-${Date.now()}`;
 
-    const { data: order, error } = await supabase
-      .from("orders")
-      .insert([
-        {
-          order_no: orderNo,
-          user_id: user!.id,
-          items: orderItems as any,
-          subtotal: totals.subtotal,
-          discount_total: totals.discountTotal,
-          gst_total: totals.gstTotal,
-          cgst_total: totals.cgstTotal,
-          total_amount: totals.total,
-          shipping_address: shippingAddress as any,
-          payment_status: "pending",
-          order_status: "pending",
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return order;
+    return {
+      order_no: orderNo,
+      subtotal: totals.subtotal,
+      discount_total: 0,
+      gst_total: totals.gstTotal,
+      cgst_total: totals.cgstTotal,
+      delivery_fee: totals.deliveryFee,
+      total_amount: totals.total,
+      shipping_address: address,
+      items: orderItems,
+    };
   };
 
-  // Load Razorpay SDK dynamically
   const loadRazorpayScript = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if ((window as any).Razorpay) return resolve();
@@ -183,88 +203,55 @@ export default function Checkout() {
     });
   };
 
-  const handleRazorpayPayment = async (order: any) => {
-    try {
-      // Ensure publishable key is available at runtime
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-      if (!keyId) {
-        // clearer message and checks for the correct env var name
-        throw new Error(
-          "Razorpay Key ID (VITE_RAZORPAY_KEY_ID) missing in client env. Please add it to your .env and redeploy."
-        );
-      }
+  const handlePayment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!settingsLoaded) {
+      toast.error("Loading settings...");
+      return;
+    }
+    if (!addressConfirmed) {
+      toast.error("Please confirm address.");
+      return;
+    }
 
+    setLoading(true);
+
+    try {
       await loadRazorpayScript();
 
-      // IMPORTANT: your Edge Function multiplies amount * 100 already.
-      // So send the amount in RUPEES (not paise) and let the server convert to paise.
-      // Previously you were sending paise and server was multiplying again -> huge value -> 500.
-      const payload = {
-        amount: Number(totals.total), // rupees (server will do Math.round(amount * 100))
-        currency: "INR",
-        receipt: order.order_no,
-      };
+      // 1. Prepare Data
+      const orderData = prepareOrderData();
+      console.log("Preparing Order Data:", orderData); // DEBUG LOG
 
-      // call the Edge Function
-      let razorpayOrder: any = null;
+      const amountInRupees = Number(totals.total.toFixed(2));
 
-      try {
-        const invokeResult = await supabase.functions.invoke(
-          "create-razorpay-order",
-          {
-            body: payload,
-          }
-        );
+      // 2. Call Server to generate Razorpay ID
+      const { data: rzpOrder, error: rzpError } =
+        await supabase.functions.invoke("create-razorpay-order", {
+          body: {
+            amount: amountInRupees,
+            currency: "INR",
+            receipt: orderData.order_no,
+          },
+        });
 
-        // supabase.functions.invoke returns FunctionsResponse with data and error
-        const { data, error } = invokeResult as any;
-        if (error) throw error;
-        razorpayOrder = data;
-      } catch (fnError: any) {
-        console.error("Edge function (create-razorpay-order) failed:", fnError);
-        // try to surface message returned by the function (if any)
-        const message = fnError?.message || JSON.stringify(fnError);
-        throw new Error(`Payment server error: ${message}`);
-      }
+      if (rzpError) throw new Error(rzpError.message);
+      if (!rzpOrder?.id) throw new Error("Failed to init payment");
 
-      if (!razorpayOrder || !razorpayOrder.id) {
-        throw new Error("Failed to create Razorpay order from server");
-      }
-
-      // SAVE RAZORPAY ORDER ID IN SUPABASE
-      await supabase
-        .from("orders")
-        .update({
-          razorpay_order_id: razorpayOrder.id,
-        })
-        .eq("id", order.id);
-
+      // 3. Open Razorpay
       const options = {
-        key: keyId,
-        amount: razorpayOrder.amount, // should be paise (server returns paise)
-        currency: razorpayOrder.currency || "INR",
+        key: rzpOrder.key_id,
+        amount: rzpOrder.amount,
+        currency: "INR",
         name: "F4TRADERS",
-        description: `Order ${order.order_no}`,
-        order_id: razorpayOrder.id,
+        description: `Order ${orderData.order_no}`,
+        order_id: rzpOrder.id,
         handler: async function (response: any) {
           try {
-            // Reduce stock
-            for (const item of items) {
-              const { data: product } = await supabase
-                .from("products")
-                .select("stock")
-                .eq("id", item.product.id)
-                .single();
+            toast.info("Verifying payment...");
+            console.log("Sending verification with data:", orderData); // DEBUG LOG
 
-              if (product) {
-                await supabase
-                  .from("products")
-                  .update({ stock: product.stock - item.quantity })
-                  .eq("id", item.product.id);
-              }
-            }
-
-            // Ask your edge function to verify signature and update order
+            // ✅ THIS IS THE CRITICAL PART - SENDING order_data
             const { error: verifyError } = await supabase.functions.invoke(
               "verify-razorpay-payment",
               {
@@ -272,80 +259,52 @@ export default function Checkout() {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
-                  orderId: order.id,
+
+                  // Passing the Data
+                  order_data: orderData,
+                  items: orderData.items,
+                  user_id: user!.id,
                 },
               }
             );
-            console.log("razorpay verification result:", verifyError);
 
             if (verifyError) throw verifyError;
 
             await clearCart();
-            toast.success("Payment successful! Order placed.");
+            toast.success("Order Placed Successfully!");
             navigate("/track-order");
-          } catch (err) {
-            console.error("Post-payment error", err);
-            toast.error("Payment verification failed");
+          } catch (err: any) {
+            console.error("Verification error", err);
+            toast.error(err.message || "Order creation failed.");
           }
         },
         prefill: {
           name: address.fullName,
           contact: address.phone,
         },
-        theme: {
-          color: "#000000",
-        },
+        theme: { color: "#000000" },
       };
 
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error: any) {
-      console.error("Razorpay error", error);
-      // display clean error to the user and keep the error in console for debugging
-      toast.error(error.message || "Razorpay checkout failed");
-      // do not rethrow: we want the UI to recover gracefully
-    }
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!addressConfirmed) {
-      toast.error(
-        "Please confirm the delivery address before placing the order."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const order = await createOrder(address);
-      // Only Razorpay flow is supported in production right now
-      await handleRazorpayPayment(order);
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      // surface meaningful message if available
-      toast.error(
-        error?.message?.startsWith("Payment server error:")
-          ? "Payment server error. Check logs."
-          : "Checkout failed. Please try again."
-      );
+      console.error("Payment Flow Error:", error);
+      toast.error(error.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
+  // ... (JSX Return logic stays exactly the same)
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-4">Delivery Address</h2>
-
               <div className="space-y-2">
                 <div className="p-4 border rounded-lg">
                   <div className="font-semibold">{address.fullName || "—"}</div>
@@ -355,102 +314,157 @@ export default function Checkout() {
                     {address.pincode}
                   </div>
                 </div>
-
-                <label className="inline-flex items-center space-x-2">
+                <label className="inline-flex items-center space-x-2 pt-2">
                   <input
                     type="checkbox"
+                    className="w-4 h-4"
                     checked={addressConfirmed}
                     onChange={(e) => setAddressConfirmed(e.target.checked)}
                   />
                   <span>Confirm delivery address</span>
                 </label>
-
-                <div className="text-sm text-muted-foreground">
-                  If you want to use a different address, please update it from
-                  your account addresses page before placing the order.
-                </div>
               </div>
             </Card>
-
             <Card className="p-6 mt-6">
               <h2 className="text-xl font-bold mb-4">Payment Method</h2>
-
-              {/* ONLY Razorpay enabled - COD disabled until further notice */}
-              <div className="p-4 border rounded-lg mb-3">
-                <div className="font-semibold">Razorpay (Online Payment)</div>
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <div className="font-semibold">Razorpay Secure Payment</div>
                 <div className="text-sm text-muted-foreground">
-                  Pay securely with card, UPI, net banking.
+                  Cards, UPI, NetBanking
                 </div>
-              </div>
-
-              <div className="p-4 border rounded-lg bg-yellow-50 text-sm">
-                Cash on Delivery is temporarily disabled due to technical
-                reasons. We expect to enable it as soon as possible — thank you
-                for your patience.
               </div>
             </Card>
           </div>
-
           <div>
             <Card className="p-6 sticky top-4">
               <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-              <div className="space-y-2 text-sm mb-4">
+
+              {/* 1. Item List with crossed-out prices */}
+              <div className="space-y-4 text-sm mb-4">
                 {items.map((item) => {
-                  const product = item.product;
-                  if (!product) return null;
+                  // Calculate individual item math
+                  const originalPrice = item.product.price_inr * item.quantity;
+                  const discountAmount =
+                    originalPrice * (item.product.discount_percent / 100);
+                  const finalPrice = originalPrice - discountAmount;
+
                   return (
-                    <div key={item.id} className="flex justify-between">
-                      <span>
-                        {product.title} x {item.quantity}
-                      </span>
-                      <span>
-                        ₹{(product.price_inr * item.quantity).toFixed(2)}
-                      </span>
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-start"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {item.product.title}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            x {item.quantity}
+                          </span>
+                        </div>
+                        {/* Show Discount Details if applicable */}
+                        {item.product.discount_percent > 0 && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            <span className="line-through mr-1">
+                              ₹{originalPrice.toFixed(2)}
+                            </span>
+                            <span className="text-green-600 font-medium">
+                              (-₹{discountAmount.toFixed(2)})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div>₹{finalPrice.toFixed(2)}</div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
               <div className="border-t pt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
+                {/* 2. Added: Total MRP (Before Discount) */}
+                {/* We calculate gross total on the fly for display purposes */}
+                {(() => {
+                  const totalMRP = items.reduce(
+                    (acc, item) => acc + item.product.price_inr * item.quantity,
+                    0
+                  );
+                  const totalDiscount = items.reduce(
+                    (acc, item) =>
+                      acc +
+                      item.product.price_inr *
+                        item.quantity *
+                        (item.product.discount_percent / 100),
+                    0
+                  );
+
+                  return (
+                    <>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Total MRP</span>
+                        <span>₹{totalMRP.toFixed(2)}</span>
+                      </div>
+
+                      {totalDiscount > 0 && (
+                        <div className="flex justify-between text-green-600 font-medium">
+                          <span>Discount on MRP</span>
+                          <span>-₹{totalDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                <div className="flex justify-between text-muted-foreground text-xs pt-2">
+                  <span>Taxable Value (Net)</span>
+                  <span>₹{totals.taxableValue.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between text-muted-foreground text-xs">
+                  <span>GST ({gstRate}%)</span>
+                  <span>₹{totals.gstTotal.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between text-muted-foreground text-xs">
+                  <span>CGST ({cgstRate}%)</span>
+                  <span>₹{totals.cgstTotal.toFixed(2)}</span>
+                </div>
+
+                <div className="border-t my-2"></div>
+
+                <div className="flex justify-between font-medium">
                   <span>Subtotal</span>
                   <span>₹{totals.subtotal.toFixed(2)}</span>
                 </div>
-                {totals.discountTotal > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
-                    <span>-₹{totals.discountTotal.toFixed(2)}</span>
-                  </div>
-                )}
+
                 <div className="flex justify-between">
-                  <span>GST</span>
-                  <span>₹{totals.gstTotal.toFixed(2)}</span>
+                  <span>Delivery Charges</span>
+                  {totals.deliveryFee === 0 ? (
+                    <span className="text-green-600 font-bold">FREE</span>
+                  ) : (
+                    <span>₹{totals.deliveryFee.toFixed(2)}</span>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span>CGST</span>
-                  <span>₹{totals.cgstTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-green-600">
-                  <span>Delivery</span>
-                  <span>FREE</span>
-                </div>
+
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span>Total Payable</span>
                     <span>₹{totals.total.toFixed(2)}</span>
                   </div>
+                  {totals.deliveryFee === 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Free delivery applied for Tamil Nadu location.
+                    </p>
+                  )}
                 </div>
               </div>
 
               <Button
-                onClick={handleSubmit}
-                disabled={loading}
+                onClick={handlePayment}
+                disabled={loading || !settingsLoaded}
                 className="w-full mt-6"
                 size="lg"
               >
-                {loading
-                  ? "Processing..."
-                  : `Pay ₹${totals.total.toFixed(2)} with Razorpay`}
+                {loading ? "Processing..." : `Pay ₹${totals.total.toFixed(2)}`}
               </Button>
             </Card>
           </div>

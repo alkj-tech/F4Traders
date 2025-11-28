@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,23 +15,29 @@ serve(async (req) => {
   try {
     const { amount, currency = "INR", receipt } = await req.json();
 
-    console.log("📌 Received amount:", amount);
+    console.log("📌 Received amount (Rupees):", amount);
 
     if (!amount || amount <= 0) {
       throw new Error("Invalid amount");
     }
 
+    // 1. Get Keys from Supabase Secrets
     const keyId = Deno.env.get("RAZORPAY_KEY_ID");
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
-    console.log("🔑 Key ID loaded?", !!keyId);
-
     if (!keyId || !keySecret) {
+      console.error("❌ Secrets missing: Check RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET");
       throw new Error("Razorpay environment keys missing");
     }
 
+    // 2. Prepare Amount (Convert to Paise and ensure Integer)
+    const amountInPaise = Math.round(amount * 100);
+    console.log("💰 Converting to Paise:", amountInPaise);
+
+    // 3. Create Authorization Header
     const auth = btoa(`${keyId}:${keySecret}`);
 
+    // 4. Call Razorpay API
     const response = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
       headers: {
@@ -38,7 +45,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount,
+        amount: amountInPaise,
         currency,
         receipt,
       }),
@@ -51,10 +58,13 @@ serve(async (req) => {
       throw new Error(data.error?.description || "Failed creating order");
     }
 
-    return new Response(JSON.stringify(data), {
+    // 5. Return Data AND the Key ID to the client
+    // This ensures the client uses the exact same key that created the order
+    return new Response(JSON.stringify({ ...data, key_id: keyId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+
+  } catch (err: any) {
     console.error("🔥 Function ERROR:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
